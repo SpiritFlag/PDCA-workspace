@@ -5,7 +5,6 @@ import { authClient } from '@/lib/auth'
 import { clearAccessTokenCache } from '@/lib/auth'
 
 export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
-  const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -17,10 +16,9 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     setPending(true)
     clearAccessTokenCache()
 
-    const result =
-      mode === 'sign-in'
-        ? await authClient.signIn.email({ email, password })
-        : await authClient.signUp.email({ email, password, name: email })
+    // Decision: 개발 단계 동안 회원가입 비활성화 — 로그인 경로만 노출한다.
+    // authClient.signUp은 호출하지 않는다(서버 엔드포인트는 열려 있음, 별도 차단 필요).
+    const result = await authClient.signIn.email({ email, password })
 
     setPending(false)
     if (result.error) {
@@ -35,9 +33,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       onSubmit={handleSubmit}
       className="mx-auto mt-24 flex w-full max-w-sm flex-col gap-3 rounded-lg border border-(--ctp-surface0) bg-(--ctp-mantle) p-6"
     >
-      <h1 className="text-lg font-medium text-(--ctp-text)">
-        {mode === 'sign-in' ? '로그인' : '회원가입'}
-      </h1>
+      <h1 className="text-lg font-medium text-(--ctp-text)">로그인</h1>
 
       <input
         type="email"
@@ -64,16 +60,12 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         disabled={pending}
         className="rounded bg-(--ctp-mauve) px-3 py-2 text-(--ctp-base) disabled:opacity-50"
       >
-        {pending ? '처리 중...' : mode === 'sign-in' ? '로그인' : '가입하기'}
+        {pending ? '처리 중...' : '로그인'}
       </button>
 
-      <button
-        type="button"
-        onClick={() => setMode((m) => (m === 'sign-in' ? 'sign-up' : 'sign-in'))}
-        className="text-sm text-(--ctp-subtext1) underline"
-      >
-        {mode === 'sign-in' ? '계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인'}
-      </button>
+      <p className="text-center text-sm text-(--ctp-subtext0)">
+        현재 개발 단계로 회원가입은 받지 않습니다
+      </p>
     </form>
   )
 }

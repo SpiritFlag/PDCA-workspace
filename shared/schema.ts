@@ -57,3 +57,41 @@ export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>
 export const resolveLinksSchema = z.object({
   paths: z.array(z.string().min(1)).max(500),
 })
+
+// Design Ref: §3.1·§4.1 — 백로그 zod 스키마. F7 패턴(필드 정의/refine 분리)을 따른다.
+export const backlogPrioritySchema = z.enum(['urgent', 'high', 'medium', 'low'])
+export type BacklogPriority = z.infer<typeof backlogPrioritySchema>
+export const backlogStatusSchema = z.enum(['todo', 'doing', 'done', 'resolved', 'dropped'])
+
+const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 형식이어야 합니다')
+
+export const createBacklogItemSchema = z.object({
+  title: z.string().min(1).max(300),
+  priority: backlogPrioritySchema,
+  detail: z.string().max(20000).optional(),
+  openedOn: dateStringSchema,
+})
+export type CreateBacklogItemInput = z.infer<typeof createBacklogItemSchema>
+
+const backlogItemFields = z.object({
+  title: z.string().min(1).max(300),
+  priority: backlogPrioritySchema,
+  status: backlogStatusSchema,
+  detail: z.string().max(20000).optional(),
+  openedOn: dateStringSchema,
+  closedOn: dateStringSchema.optional(),
+})
+
+export const updateBacklogItemSchema = backlogItemFields.partial()
+export type UpdateBacklogItemInput = z.infer<typeof updateBacklogItemSchema>
+
+export const reorderBacklogSchema = z.object({
+  ids: z.array(z.uuid()).min(1).max(1000),
+})
+export type ReorderBacklogInput = z.infer<typeof reorderBacklogSchema>
+
+// Design Ref: §3.2 — PAT 발급 요청. name만 입력받는다(D-04: 평문은 발급 응답에만 존재).
+export const createApiTokenSchema = z.object({
+  name: z.string().min(1).max(100),
+})
+export type CreateApiTokenInput = z.infer<typeof createApiTokenSchema>

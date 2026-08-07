@@ -127,9 +127,11 @@ export function ImportDialog({
       ? await updateMut.mutateAsync({ id: document.id, input })
       : await createMut.mutateAsync(input)
     if (!result.ok) {
-      const err = result.error as { code?: string; path?: string }
+      const err = result.error as { code?: string; details?: { target?: string } }
       setSubmitError(
-        err.code === 'PATH_TAKEN' ? `이미 존재하는 경로입니다: ${err.path}` : '저장 실패',
+        err.code === 'CONFLICT' && err.details?.target === 'path'
+          ? `이미 존재하는 경로입니다: ${input.path}`
+          : '저장 실패',
       )
       return
     }

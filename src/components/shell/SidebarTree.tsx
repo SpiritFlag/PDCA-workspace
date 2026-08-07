@@ -1,6 +1,7 @@
 // Design Ref: §5.3 SidebarTree — 문서 목록→경로 트리, 접기/펴기, 현재 문서 하이라이트 (FR-16)
+// Design Ref: §5.4 [module-2] 진입·셸 — 백로그 진입 링크 + 현재 페이지 하이라이트 (FR-11)
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { useWorkspaces } from '@/features/workspace/hooks/useWorkspaces'
 import { useProjects } from '@/features/project/hooks/useProjects'
 import { useDocuments } from '@/features/document/hooks/useDocuments'
@@ -12,6 +13,7 @@ export function SidebarTree() {
     projSlug: string
     '*': string
   }>()
+  const { pathname } = useLocation()
   const { data: workspaces } = useWorkspaces()
   const workspace = workspaces?.find((w) => w.slug === wsSlug)
   const { data: projects } = useProjects(workspace?.id ?? '')
@@ -23,9 +25,17 @@ export function SidebarTree() {
   }
 
   const tree = buildDocTree(documents ?? [])
+  const onBacklog = pathname === `/w/${workspace.slug}/p/${project.slug}/backlog`
 
   return (
     <nav className="flex flex-col gap-0.5 overflow-y-auto px-2 py-2 text-sm">
+      <Link
+        to={`/w/${workspace.slug}/p/${project.slug}/backlog`}
+        className={`rounded px-2 py-1 ${onBacklog ? 'bg-(--ctp-surface0) text-(--ctp-mauve)' : 'text-(--ctp-text) hover:bg-(--ctp-surface0)'}`}
+      >
+        ★ 백로그
+      </Link>
+      <div className="my-1 border-t border-(--ctp-surface0)" />
       {tree.map((node) => (
         <TreeItem
           key={node.path}

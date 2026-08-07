@@ -29,6 +29,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-3">
           <span className="hidden text-(--ctp-overlay0) sm:inline">⌘K 검색</span>
           <ThemeToggle />
+          <Link to="/settings/tokens" className="text-(--ctp-overlay0) underline">
+            API 토큰
+          </Link>
           <span className="text-(--ctp-subtext1)">{session?.user.email}</span>
           <button onClick={() => authClient.signOut()} className="text-(--ctp-overlay0) underline">
             로그아웃

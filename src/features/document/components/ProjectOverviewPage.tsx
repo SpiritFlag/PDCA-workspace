@@ -23,7 +23,15 @@ export function ProjectOverviewPage() {
       <Link to={`/w/${wsSlug}`} className="text-sm text-(--ctp-overlay0) underline">
         ← {workspace.name}
       </Link>
-      <h1 className="mt-2 mb-4 text-lg font-medium text-(--ctp-text)">{project.name}</h1>
+      <div className="mt-2 mb-4 flex items-center justify-between">
+        <h1 className="text-lg font-medium text-(--ctp-text)">{project.name}</h1>
+        <Link
+          to={`/w/${workspace.slug}/p/${project.slug}/backlog`}
+          className="text-sm text-(--ctp-mauve) underline"
+        >
+          ★ 백로그
+        </Link>
+      </div>
       <DocumentList projectId={project.id} wsSlug={workspace.slug} projSlug={project.slug} />
     </div>
   )

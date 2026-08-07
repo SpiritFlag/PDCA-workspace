@@ -1,15 +1,18 @@
-// Design Ref: §9.2 — 전 쿼리가 ownerId 조인을 강제하는 우회 불가 헬퍼. routes는 이 모듈만 거친다.
-import { and, eq, inArray, like } from 'drizzle-orm'
+// Design Ref: §9.2 — 전 쿼리가 ownerId 조인을 강제하는 우회 불가 헬퍼. services/*만 이 모듈을 거친다.
+import { and, desc, eq, inArray, like, sql } from 'drizzle-orm'
 import { getDb } from './client.js'
-import { documents, projects, workspaces } from './schema.js'
+import { apiTokens, backlogItems, documents, projects, workspaces } from './schema.js'
 import type {
+  CreateBacklogItemInput,
   CreateDocumentInput,
   CreateProjectInput,
   CreateWorkspaceInput,
+  UpdateBacklogItemInput,
   UpdateDocumentInput,
   UpdateProjectInput,
   UpdateWorkspaceInput,
 } from '../../shared/schema.js'
+import type { BacklogStatus } from '../../shared/transition.js'
 
 // ---- Workspaces ----
 
@@ -232,4 +235,146 @@ export async function listByPrefix(ownerId: string, projectId: string, prefix: s
         like(documents.path, `${prefix}%`),
       ),
     )
+}
+
+// ---- Backlog Items (ownership는 project->workspace 2단 조인, documents와 동일 패턴) ----
+
+export function listBacklogItems(
+  ownerId: string,
+  projectId: string,
+  statuses?: BacklogStatus[],
+) {
+  return getDb()
+    .select({ item: backlogItems })
+    .from(backlogItems)
+    .innerJoin(projects, eq(backlogItems.projectId, projects.id))
+    .innerJoin(workspaces, eq(projects.workspaceId, workspaces.id))
+    .where(
+      and(
+        eq(backlogItems.projectId, projectId),
+        eq(workspaces.ownerId, ownerId),
+        statuses && statuses.length > 0 ? inArray(backlogItems.status, statuses) : undefined,
+      ),
+    )
+    .orderBy(backlogItems.sortOrder)
+    .then((rows) => rows.map((r) => r.item))
+}
+
+export async function getBacklogItem(ownerId: string, id: string) {
+  const [row] = await getDb()
+    .select({ item: backlogItems })
+    .from(backlogItems)
+    .innerJoin(projects, eq(backlogItems.projectId, projects.id))
+    .innerJoin(workspaces, eq(projects.workspaceId, workspaces.id))
+    .where(and(eq(backlogItems.id, id), eq(workspaces.ownerId, ownerId)))
+  return row?.item ?? null
+}
+
+/** Design Ref: §4.1 — 신규 항목은 그 프로젝트 전체(접힘 섹션 포함) 맨 뒤에 붙는다 */
+export async function nextBacklogSortOrder(ownerId: string, projectId: string) {
+  const [row] = await getDb()
+    .select({ sortOrder: backlogItems.sortOrder })
+    .from(backlogItems)
+    .innerJoin(projects, eq(backlogItems.projectId, projects.id))
+    .innerJoin(workspaces, eq(projects.workspaceId, workspaces.id))
+    .where(and(eq(backlogItems.projectId, projectId), eq(workspaces.ownerId, ownerId)))
+    .orderBy(desc(backlogItems.sortOrder))
+    .limit(1)
+  return row ? row.sortOrder + 1 : 0
+}
+
+export async function createBacklogItemRow(
+  ownerId: string,
+  projectId: string,
+  input: CreateBacklogItemInput,
+) {
+  const project = await getProject(ownerId, projectId)
+  if (!project) return null
+  const sortOrder = await nextBacklogSortOrder(ownerId, projectId)
+  const [row] = await getDb()
+    .insert(backlogItems)
+    .values({ projectId, ...input, status: 'todo', sortOrder })
+    .returning()
+  return row
+}
+
+export async function updateBacklogItemRow(
+  ownerId: string,
+  id: string,
+  input: UpdateBacklogItemInput,
+) {
+  const existing = await getBacklogItem(ownerId, id)
+  if (!existing) return null
+  const [row] = await getDb()
+    .update(backlogItems)
+    .set({ ...input, updatedAt: new Date() })
+    .where(eq(backlogItems.id, id))
+    .returning()
+  return row
+}
+
+export async function deleteBacklogItemRow(ownerId: string, id: string) {
+  const existing = await getBacklogItem(ownerId, id)
+  if (!existing) return false
+  await getDb().delete(backlogItems).where(eq(backlogItems.id, id))
+  return true
+}
+
+/** Design Ref: §3.4 — 단일 SQL 다중행 UPDATE로 원자적 재번호. 소유권은 호출자가 사전 검증. */
+export async function reorderBacklogItems(projectId: string, orderedIds: string[]) {
+  const values = sql.join(
+    orderedIds.map((id, ord) => sql`(${id}::uuid, ${ord}::int)`),
+    sql`, `,
+  )
+  await getDb().execute(sql`
+    UPDATE backlog_items AS b
+    SET sort_order = v.ord, updated_at = now()
+    FROM (VALUES ${values}) AS v(id, ord)
+    WHERE b.id = v.id
+      AND b.project_id = ${projectId}::uuid
+  `)
+}
+
+// ---- API Tokens (독립 — Neon Auth 사용자 id로 직접 스코프, D-04) ----
+
+const TOKEN_LIST_COLUMNS = {
+  id: apiTokens.id,
+  name: apiTokens.name,
+  createdAt: apiTokens.createdAt,
+  lastUsedAt: apiTokens.lastUsedAt,
+}
+
+/** tokenHash는 절대 반환하지 않는다(§7 보안) */
+export function listApiTokens(ownerId: string) {
+  return getDb()
+    .select(TOKEN_LIST_COLUMNS)
+    .from(apiTokens)
+    .where(eq(apiTokens.ownerId, ownerId))
+    .orderBy(desc(apiTokens.createdAt))
+}
+
+export async function createApiToken(ownerId: string, name: string, tokenHash: string) {
+  const [row] = await getDb()
+    .insert(apiTokens)
+    .values({ ownerId, name, tokenHash })
+    .returning(TOKEN_LIST_COLUMNS)
+  return row
+}
+
+export async function deleteApiToken(ownerId: string, id: string) {
+  const rows = await getDb()
+    .delete(apiTokens)
+    .where(and(eq(apiTokens.id, id), eq(apiTokens.ownerId, ownerId)))
+    .returning({ id: apiTokens.id })
+  return rows.length > 0
+}
+
+/** Design Ref: §4.2 인증 분기 — 해시로 유니크 조회. 이 함수만이 owner_id 스코프 없이 조회한다(인증 자체가 스코프 결정) */
+export async function findApiTokenByHash(tokenHash: string) {
+  const [row] = await getDb().select().from(apiTokens).where(eq(apiTokens.tokenHash, tokenHash))
+  return row ?? null
+}
+
+export async function touchApiTokenLastUsed(id: string) {
+  await getDb().update(apiTokens).set({ lastUsedAt: new Date() }).where(eq(apiTokens.id, id))
 }

@@ -1,8 +1,20 @@
-// Design Ref: §3.1 데이터 모델 — Plan §7.3의 3테이블. 전부 1:N, 다대다 없음
-import { pgTable, uuid, text, timestamp, pgEnum, uniqueIndex, index } from 'drizzle-orm/pg-core'
+// Design Ref: §3.1 데이터 모델 — Plan §7.3의 3테이블 + backlog-with-mcp 사이클의 2테이블 추가
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  date,
+  integer,
+  pgEnum,
+  uniqueIndex,
+  index,
+} from 'drizzle-orm/pg-core'
 
 export const documentKind = pgEnum('document_kind', ['pdca', 'general'])
 export const pdcaStage = pgEnum('pdca_stage', ['plan', 'design', 'analysis', 'report'])
+export const backlogPriority = pgEnum('backlog_priority', ['urgent', 'high', 'medium', 'low'])
+export const backlogStatus = pgEnum('backlog_status', ['todo', 'doing', 'done', 'resolved', 'dropped'])
 
 export const workspaces = pgTable(
   'workspaces',
@@ -62,5 +74,41 @@ export const documents = pgTable(
   (t) => [
     uniqueIndex('documents_proj_path_uq').on(t.projectId, t.path),
     index('documents_proj_idx').on(t.projectId),
+  ],
+)
+
+export const backlogItems = pgTable(
+  'backlog_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }), // D-07: 프로젝트=보드
+    title: text('title').notNull(),
+    priority: backlogPriority('priority').notNull(),
+    status: backlogStatus('status').notNull().default('todo'),
+    detail: text('detail'), // 상세 md, 팝업 전용
+    openedOn: date('opened_on').notNull(), // D-08: 형이 지정하는 생성일
+    closedOn: date('closed_on'), //        형이 지정하는 처리일
+    sortOrder: integer('sort_order').notNull(), // D-09: 서버가 0..N-1 정규화
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('backlog_proj_sort_idx').on(t.projectId, t.sortOrder)],
+)
+
+export const apiTokens = pgTable(
+  'api_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: text('owner_id').notNull(),
+    name: text('name').notNull(), // "claude-code-wsl" 같은 식별용
+    tokenHash: text('token_hash').notNull(), // D-04: SHA-256 hex, 평문 미저장
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('api_tokens_hash_uq').on(t.tokenHash),
+    index('api_tokens_owner_idx').on(t.ownerId),
   ],
 )

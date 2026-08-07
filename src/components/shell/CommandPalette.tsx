@@ -49,6 +49,19 @@ export function CommandPalette() {
           <Command.List className="max-h-80 overflow-y-auto p-1">
             <Command.Empty className="px-3 py-4 text-sm text-(--ctp-overlay0)">결과 없음</Command.Empty>
 
+            {project && (
+              <Command.Item
+                value={`백로그 ${project.name}`}
+                onSelect={() => {
+                  navigate(`/w/${wsSlug}/p/${projSlug}/backlog`)
+                  setOpen(false)
+                }}
+                className="cursor-pointer rounded px-3 py-2 text-sm text-(--ctp-text) data-[selected=true]:bg-(--ctp-surface0)"
+              >
+                ★ 백로그: {project.name}
+              </Command.Item>
+            )}
+
             {project &&
               documents?.map((d) => (
                 <Command.Item

@@ -9,6 +9,10 @@ import { authMiddleware, type AuthEnv } from './middleware/auth.js'
 import { workspacesRoute } from './routes/workspaces.js'
 import { projectsRoute, workspaceProjectsRoute } from './routes/projects.js'
 import { documentsRoute, projectDocumentsRoute } from './routes/documents.js'
+import { backlogItemRoute, projectBacklogRoute } from './routes/backlog.js'
+import { tokensRoute } from './routes/tokens.js'
+import { mcpRoute } from './mcp/index.js'
+import { ServiceError } from './lib/errors.js'
 
 const app = new Hono<AuthEnv>()
   .basePath('/api')
@@ -21,12 +25,29 @@ const app = new Hono<AuthEnv>()
   .use('/projects/*', authMiddleware)
   .route('/projects', projectsRoute)
   .route('/projects', projectDocumentsRoute)
+  .route('/projects', projectBacklogRoute)
   .use('/documents/*', authMiddleware)
   .route('/documents', documentsRoute)
+  .use('/backlog/*', authMiddleware)
+  .route('/backlog', backlogItemRoute)
+  .use('/tokens/*', authMiddleware)
+  .route('/tokens', tokensRoute)
+  .use('/mcp', authMiddleware)
+  .route('/mcp', mcpRoute)
   .onError((err, c) => {
     // Decision: [Do] 전체 회귀 스윕에서 발견 — HTTPException(예: authMiddleware의 401)을
     // 이 핸들러가 무조건 500으로 덮어쓰고 있었다. 의도된 응답은 그대로 통과시킨다.
     if (err instanceof HTTPException) return err.getResponse()
+    // Design Ref: §6.2 ServiceError → 어댑터 매핑. message가 빈 문자열이면 필드 자체를 생략해
+    // 서비스 추출 이전 라우트의 응답 바디와 byte-동일하게 유지한다(module-1 무회귀 조건).
+    if (err instanceof ServiceError) {
+      const body: { error: { code: string; message?: string; details?: unknown } } = {
+        error: { code: err.code },
+      }
+      if (err.message) body.error.message = err.message
+      if (err.details) body.error.details = err.details
+      return c.json(body, err.status as 400 | 401 | 403 | 404 | 409 | 500)
+    }
     // Decision: [Do] postgres unique violation(23505)이 raw 500으로 새던 버그 수정 — 409로 통일 변환
     const code = (err as { cause?: { code?: string } })?.cause?.code
     if (code === '23505') {

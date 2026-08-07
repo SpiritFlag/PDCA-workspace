@@ -1,8 +1,11 @@
 // Design Ref: §7 보안 (RK-03) — Neon Auth(Stack Auth) JWT를 JWKS로 검증해 ownerId를 주입한다.
 // 세션 쿠키 방식이 Vite SPA에서 막히면 이 Bearer 토큰 방식이 기본안이다 (Plan RK-03 대안).
+// Design Ref: §4.2 — pdcaw_ 접두어면 PAT 경로(해시 조회), 그 외는 기존 JWKS JWT 경로(무변경).
 import { createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
+import { isPatToken } from '../lib/token.js'
+import { authenticateToken } from '../services/tokens.js'
 
 export type AuthEnv = {
   Variables: {
@@ -23,18 +26,27 @@ function getJwks() {
   return _jwks
 }
 
+function unauthorized(message: string) {
+  return new HTTPException(401, {
+    res: Response.json({ error: { code: 'UNAUTHORIZED', message } }, { status: 401 }),
+  })
+}
+
 /** Plan SC: C2 — 로그인 없이는 어떤 데이터도 조회되지 않는다 */
 export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
   const authHeader = c.req.header('Authorization')
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null
 
   if (!token) {
-    throw new HTTPException(401, {
-      res: Response.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Missing bearer token' } },
-        { status: 401 },
-      ),
-    })
+    throw unauthorized('Missing bearer token')
+  }
+
+  if (isPatToken(token)) {
+    const ownerId = await authenticateToken(token)
+    if (!ownerId) throw unauthorized('Invalid or revoked token')
+    c.set('ownerId', ownerId)
+    await next()
+    return
   }
 
   try {
@@ -42,12 +54,7 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
     if (!payload.sub) throw new Error('token has no sub claim')
     c.set('ownerId', payload.sub)
   } catch {
-    throw new HTTPException(401, {
-      res: Response.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } },
-        { status: 401 },
-      ),
-    })
+    throw unauthorized('Invalid or expired token')
   }
 
   await next()
