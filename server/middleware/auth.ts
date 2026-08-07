@@ -35,7 +35,16 @@ function unauthorized(message: string) {
 /** Plan SC: C2 — 로그인 없이는 어떤 데이터도 조회되지 않는다 */
 export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
   const authHeader = c.req.header('Authorization')
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null
+  let token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null
+
+  // Decision: [Do] 형 결정(2026-08-07) — claude.ai 웹 커넥터는 커스텀 Authorization 헤더를
+  // 넣을 자리가 없어 OAuth 아니면 URL뿐이다. OAuth는 백로그로 미루고 쿼리파라미터로 타협.
+  // PAT(pdcaw_)만 허용 — JWT는 브라우저 세션 전체를 대변하므로 쿼리로는 절대 안 받는다.
+  // RK-02 노출면 확대는 기존 완화책(해시 저장·즉시 폐기·last_used_at)으로 감내.
+  if (!token) {
+    const queryToken = c.req.query('token')
+    if (queryToken && isPatToken(queryToken)) token = queryToken
+  }
 
   if (!token) {
     throw unauthorized('Missing bearer token')
