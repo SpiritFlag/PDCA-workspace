@@ -444,6 +444,12 @@ class ServiceError extends Error { constructor(public code: ErrorCode, message, 
 - QueryClient 전역 `onError`: 401 → 토큰 캐시 클리어 + 로그인 화면. 그 외 → 토스트.
 - 1차 사이클에 없던 부분만 추가 — 개별 화면의 fieldErrors 처리는 기존 패턴 유지.
 
+**(사후 2026-08-08 확인, refine-mcp-hardening 사이클 M-1)**: 실제 구현 위치는 위 설계와
+다르다 — `src/lib/api.ts`의 `authedFetch`에 있다. 개별 feature의 api.ts가 401을 던지는 곳도
+있고 `{ ok: false }`로 삼키는 곳도 있어(문서·백로그 쓰기 계열) QueryClient `onError`로는 절반만
+잡힌다. 모든 요청이 `authedFetch` 하나를 지나므로 여기서 처리해야 진짜 "전역"이다 — 사유는
+`api.ts:6-9` 코드 주석에 이미 있었고, 문서만 못 따라간 상태였다(2차 analysis M-1).
+
 ---
 
 ## 7. Security Considerations
@@ -620,3 +626,4 @@ class ServiceError extends Error { constructor(public code: ErrorCode, message, 
 | 0.1 | 2026-08-07 | 최초 작성. Checkpoint 3에서 옵션 B(Clean — 서비스 계층) 선택. Plan §6.2 검증 3건 반영(MCP stateless 사양 적합·`claude mcp add` 헤더 방식·Neon 단일문/배치 원자성). Plan §8.3 미결(TOKEN_HASH_SECRET)을 "불필요"로 확정, 에러 코드 표(§6.1) 확정 및 PATH_TAKEN→CONFLICT 통일 결정 | cogmo |
 | 0.2 | 2026-08-07 | Check 단계 중 D-18 추가: claude.ai 웹 커넥터 대응으로 MCP 인증에 `?token=` 쿼리파라미터 폴백(PAT 한정) 추가. §4.2 갱신 | cogmo |
 | 0.3 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클 module-1)** §6.1에 403 `FORBIDDEN` 행 추가 — Origin 거부가 표를 안 지나는 리터럴 응답이던 균열(I-3)을 코드(`mcp/index.ts`가 `ServiceError('FORBIDDEN', ...)` throw)와 같은 커밋에서 정합화(RK-12) | cogmo |
+| 0.4 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클 module-4, S5)** §6.3에 FR-21 실구현 위치 정정 추가(M-1) — Design은 QueryClient onError를 지정했지만 실제는 `src/lib/api.ts`의 `authedFetch` | cogmo |
