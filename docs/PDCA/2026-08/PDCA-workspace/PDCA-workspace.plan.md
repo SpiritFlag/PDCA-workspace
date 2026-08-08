@@ -97,7 +97,7 @@ Plan 작성 시점에 cogmo-report `docs/`를 직접 스캔해 확정한 사실�
 
 ### 1.5 관련 문서
 
-- 요구사항 원문: [prompt.tmp](../../../../prompt.tmp)
+- 요구사항 원문: `prompt.tmp` (RULE.md의 `.tmp` 규칙에 따라 답변 반영 후 삭제됨 — `c48d434`. 내용은 위 §1.4 Checkpoint 1·2 답변에 반영되어 있다)
 - 프로젝트 규칙: [CLAUDE.md](../../../../CLAUDE.md)
 - 문서 구조 레퍼런스: `cogmo-report` 저장소 `docs/` (외부 저장소, 본 저장소 링크 아님)
 
@@ -575,3 +575,4 @@ Neon Postgres  (dev 브랜치 / main 브랜치)
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
 | 0.1 | 2026-08-07 | 최초 작성. Checkpoint 1·2 답변(Q1 붙여넣기 임포트 / Q2 URL 경로 미러링 / Q3 Tailwind+Catppuccin / Q4 Neon 브랜치 분리) 반영. cogmo-report docs 실측(F1~F8) 기반 | cogmo |
+| 0.2 | 2026-08-08 | §1.5의 `prompt.tmp` 깨진 링크 제거 — v0.1.2(`c48d434`)에서 해당 `.tmp` 파일이 삭제되며 유일한 깨진 링크로 남아 있었다(3차 사이클 analysis M-10) | cogmo |
