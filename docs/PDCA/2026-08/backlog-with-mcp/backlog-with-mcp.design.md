@@ -417,6 +417,7 @@ REST는 1차 사이클 규격 유지: `{ error: { code, message, details? } }`. 
 |:----:|------|------|----------------|
 | 400 | `VALIDATION_ERROR` | zod 실패, reorder id 집합 불일치 | 폼 fieldErrors / 토스트 |
 | 401 | `UNAUTHORIZED` | JWT·PAT 없음/만료/폐기됨 | 로그인 리다이렉트 (FR-21) |
+| 403 | `FORBIDDEN` | 요청 주체는 확인됐으나 그 행위가 금지됨 — **MCP Origin 위반** (refine-mcp-hardening S2, D-23) | (MCP 전용 — UI에선 발생 안 함) |
 | 403 | `TRANSITION_DENIED` | `canTransition` false — **MCP가 doing/done 시도 (FR-19)** | (MCP 전용 — UI에선 발생 안 함) |
 | 404 | `NOT_FOUND` | 자원 없음 또는 타인 소유 (구분 안 함) | 목록 복귀 / 새로 만들기 |
 | 409 | `CONFLICT` | 유니크 충돌 전반. `details.target`으로 대상 명시 (`path`, `slug`, …) | 대상별 안내 (문서: 덮어쓰기/경로수정) |
@@ -618,3 +619,4 @@ class ServiceError extends Error { constructor(public code: ErrorCode, message, 
 |------|------|-----------|--------|
 | 0.1 | 2026-08-07 | 최초 작성. Checkpoint 3에서 옵션 B(Clean — 서비스 계층) 선택. Plan §6.2 검증 3건 반영(MCP stateless 사양 적합·`claude mcp add` 헤더 방식·Neon 단일문/배치 원자성). Plan §8.3 미결(TOKEN_HASH_SECRET)을 "불필요"로 확정, 에러 코드 표(§6.1) 확정 및 PATH_TAKEN→CONFLICT 통일 결정 | cogmo |
 | 0.2 | 2026-08-07 | Check 단계 중 D-18 추가: claude.ai 웹 커넥터 대응으로 MCP 인증에 `?token=` 쿼리파라미터 폴백(PAT 한정) 추가. §4.2 갱신 | cogmo |
+| 0.3 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클 module-1)** §6.1에 403 `FORBIDDEN` 행 추가 — Origin 거부가 표를 안 지나는 리터럴 응답이던 균열(I-3)을 코드(`mcp/index.ts`가 `ServiceError('FORBIDDEN', ...)` throw)와 같은 커밋에서 정합화(RK-12) | cogmo |

@@ -5,12 +5,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPTransport } from '@hono/mcp'
 import type { AuthEnv } from '../middleware/auth.js'
 import { registerTools } from './tools.js'
+import { ServiceError } from '../lib/errors.js'
 
 export const mcpRoute = new Hono<AuthEnv>()
   .post('/', async (c) => {
     const origin = c.req.header('origin')
+    // Design Ref: §4.3, §9.1 규칙 6 — 에러 응답은 ServiceError만 경유(표 밖 리터럴 응답 금지)
     if (origin && origin !== new URL(c.req.url).origin) {
-      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid Origin' } }, 403)
+      throw new ServiceError('FORBIDDEN', 'Invalid Origin')
     }
 
     // Design Ref: §4.3 — ownerId별로 서버·트랜스포트를 새로 만드는 게 곧 stateless의 실체.

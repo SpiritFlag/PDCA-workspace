@@ -35,20 +35,30 @@ export type UpdateProjectInput = z.infer<typeof updateProjectSchema>
 export const documentKindSchema = z.enum(['pdca', 'general'])
 export const pdcaStageSchema = z.enum(['plan', 'design', 'analysis', 'report'])
 
+// Design Ref: §3.2 — MCP document_write가 재사용(D-26). 서버가 normalizePath로 재정규화하므로
+// path는 여기서 형태만 검증
+export const documentPathSchema = z.string().min(1).max(1000)
+export const documentTitleSchema = z.string().min(1).max(300)
+export const documentContentSchema = z.string().min(1)
+
+// Design Ref: §4.2 — createDocumentSchema의 refine 술어. MCP document_write가 이름 붙여 재사용(D-26)
+export const documentKindStageRule = (v: { kind: string; pdcaStage?: string }) =>
+  v.kind === 'pdca' || v.pdcaStage === undefined
+export const DOCUMENT_KIND_STAGE_MESSAGE = "kind가 'general'이면 pdcaStage를 지정할 수 없습니다"
+
 // zod v4: .refine()이 붙은 스키마엔 .partial()을 쓸 수 없다 — 필드 정의와 refine을 분리한다
-const documentFields = z.object({
-  title: z.string().min(1).max(300),
-  // Design Ref: §3.2 — 서버가 normalizePath로 재정규화하므로 여기서는 형태만 검증
-  path: z.string().min(1).max(1000),
+export const documentFields = z.object({
+  title: documentTitleSchema,
+  path: documentPathSchema,
   kind: documentKindSchema,
   pdcaStage: pdcaStageSchema.optional(),
-  content: z.string().min(1),
+  content: documentContentSchema,
 })
 
-export const createDocumentSchema = documentFields.refine(
-  (v) => v.kind === 'pdca' || v.pdcaStage === undefined,
-  { message: "kind가 'general'이면 pdcaStage를 지정할 수 없습니다", path: ['pdcaStage'] },
-)
+export const createDocumentSchema = documentFields.refine(documentKindStageRule, {
+  message: DOCUMENT_KIND_STAGE_MESSAGE,
+  path: ['pdcaStage'],
+})
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>
 
 export const updateDocumentSchema = documentFields.partial()
@@ -63,23 +73,27 @@ export const backlogPrioritySchema = z.enum(['urgent', 'high', 'medium', 'low'])
 export type BacklogPriority = z.infer<typeof backlogPrioritySchema>
 export const backlogStatusSchema = z.enum(['todo', 'doing', 'done', 'resolved', 'dropped'])
 
-const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 형식이어야 합니다')
+// Design Ref: §3.2 — MCP 툴 입력이 이 스키마들을 재사용한다(2차 회고 Try 2의 규약화, refine-mcp-hardening §8.2)
+export const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 형식이어야 합니다')
+export const backlogTitleSchema = z.string().min(1).max(300)
+export const backlogDetailSchema = z.string().max(20000)
 
 export const createBacklogItemSchema = z.object({
-  title: z.string().min(1).max(300),
+  title: backlogTitleSchema,
   priority: backlogPrioritySchema,
-  detail: z.string().max(20000).optional(),
+  detail: backlogDetailSchema.optional(),
   openedOn: dateStringSchema,
 })
 export type CreateBacklogItemInput = z.infer<typeof createBacklogItemSchema>
 
+// Design Ref: §3.2 — closedOn nullable(D-20). null=명시적으로 지움, 키 생략=변경 없음(무회귀)
 const backlogItemFields = z.object({
-  title: z.string().min(1).max(300),
+  title: backlogTitleSchema,
   priority: backlogPrioritySchema,
   status: backlogStatusSchema,
-  detail: z.string().max(20000).optional(),
+  detail: backlogDetailSchema.optional(),
   openedOn: dateStringSchema,
-  closedOn: dateStringSchema.optional(),
+  closedOn: dateStringSchema.nullable().optional(),
 })
 
 export const updateBacklogItemSchema = backlogItemFields.partial()

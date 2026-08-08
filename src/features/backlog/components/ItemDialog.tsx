@@ -69,6 +69,7 @@ export function ItemDialog({
       nextClosedOn = todayStr()
       setClosedOn(nextClosedOn)
     }
+    // Design Ref: §5.1 D-22·D-28 — 배지 클릭은 날짜 무변경(키 생략). 지우기는 폼 저장 경로만
     await updateMut.mutateAsync({
       id: item.id,
       input: { status: next, closedOn: nextClosedOn || undefined },
@@ -78,9 +79,10 @@ export function ItemDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (item) {
+      // Design Ref: §3.3 D-28 — 폼 저장 경로만 null을 보낸다: 빈 값 = 명시적으로 지움
       const result = await updateMut.mutateAsync({
         id: item.id,
-        input: { title, priority, openedOn, closedOn: closedOn || undefined, detail: detailDraft },
+        input: { title, priority, openedOn, closedOn: closedOn === '' ? null : closedOn, detail: detailDraft },
       })
       if (result.ok) onClose()
     } else {
@@ -160,6 +162,17 @@ export function ItemDialog({
               onChange={(e) => setClosedOn(e.target.value)}
               className="rounded border border-(--ctp-surface1) bg-(--ctp-base) px-2 py-1 text-(--ctp-text)"
             />
+            {/* Design Ref: §5.1 D-27 — 값이 있을 때만 지우기 동선 표시 */}
+            {closedOn !== '' && (
+              <button
+                type="button"
+                onClick={() => setClosedOn('')}
+                aria-label="처리일 지우기"
+                className="text-(--ctp-overlay0) hover:text-(--ctp-text)"
+              >
+                ✕
+              </button>
+            )}
           </label>
         </div>
 

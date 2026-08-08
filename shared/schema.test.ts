@@ -31,4 +31,24 @@ describe('shared/schema module', () => {
     })
     expect(result.success).toBe(false)
   })
+
+  // Design Ref: §8.2 t1~t3 — D-20(closedOn nullable) 실증
+  it('updateBacklogItemSchema accepts closedOn:null and preserves it (t1)', async () => {
+    const { updateBacklogItemSchema } = await import('./schema')
+    const result = updateBacklogItemSchema.parse({ closedOn: null })
+    expect('closedOn' in result).toBe(true)
+    expect(result.closedOn).toBeNull()
+  })
+
+  it('updateBacklogItemSchema rejects a malformed closedOn (t2)', async () => {
+    const { updateBacklogItemSchema } = await import('./schema')
+    const result = updateBacklogItemSchema.safeParse({ closedOn: 'aaa' })
+    expect(result.success).toBe(false)
+  })
+
+  it('updateBacklogItemSchema treats an omitted closedOn as unchanged (t3)', async () => {
+    const { updateBacklogItemSchema } = await import('./schema')
+    const result = updateBacklogItemSchema.parse({})
+    expect('closedOn' in result).toBe(false)
+  })
 })
