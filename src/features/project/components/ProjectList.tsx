@@ -1,27 +1,19 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  useCreateProject,
-  useDeleteProject,
-  useProjects,
-  useUpdateProject,
-} from '../hooks/useProjects'
+import { useCreateProject, useProjects, useUpdateProject } from '../hooks/useProjects'
 import { ProjectForm } from './ProjectForm'
 import type { CreateProjectInput } from '@shared/schema'
 
 export function ProjectList({
   workspaceId,
   workspaceSlug,
-  workspaceName,
 }: {
   workspaceId: string
   workspaceSlug: string
-  workspaceName: string
 }) {
   const { data: projects, isLoading } = useProjects(workspaceId)
   const createMut = useCreateProject(workspaceId)
   const updateMut = useUpdateProject(workspaceId)
-  const deleteMut = useDeleteProject(workspaceId)
 
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -34,20 +26,13 @@ export function ProjectList({
     await updateMut.mutateAsync({ id, input })
     setEditingId(null)
   }
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`"${name}" 프로젝트를 삭제하면 하위 문서가 전부 삭제됩니다. 계속할까요?`)) return
-    await deleteMut.mutateAsync(id)
-  }
 
   if (isLoading) return <p className="p-8 text-(--ctp-subtext1)">불러오는 중...</p>
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <Link to="/" className="text-sm text-(--ctp-overlay0) underline">
-        ← 워크스페이스 목록
-      </Link>
-      <div className="mt-2 mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-medium text-(--ctp-text)">{workspaceName} 프로젝트</h1>
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-base font-medium text-(--ctp-text)">프로젝트</h2>
         {!creating && (
           <button
             onClick={() => setCreating(true)}
@@ -92,9 +77,6 @@ export function ProjectList({
                 <div className="flex gap-2 text-sm">
                   <button onClick={() => setEditingId(p.id)} className="text-(--ctp-subtext1) underline">
                     수정
-                  </button>
-                  <button onClick={() => handleDelete(p.id, p.name)} className="text-(--ctp-red) underline">
-                    삭제
                   </button>
                 </div>
               </div>

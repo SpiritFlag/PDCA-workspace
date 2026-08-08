@@ -9,7 +9,7 @@ import { CommandPalette } from './CommandPalette'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: session } = authClient.useSession()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.matchMedia('(min-width: 768px)').matches)
 
   return (
     <div className="flex h-screen flex-col">
