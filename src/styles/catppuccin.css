@@ -1,67 +1,71 @@
-/* Design Ref: §5.5 — Catppuccin Latte(라이트)/Mocha(다크) 공식 토큰. 임의 색 추가 금지 */
+/* Design Ref: §5.5 — 청량한 여름 커스텀 팔레트. Catppuccin Latte/Mocha를 베이스로 쿨 틸/스카이 방향으로 조정.
+   주 강조(--ctp-mauve)는 여름 틸로 커스텀했고, PDCA design 배지용 보라는 --ctp-lavender로 분리했다. */
 
 :root,
 :root[data-theme='latte'] {
-  --ctp-base: #eff1f5;
-  --ctp-mantle: #e6e9ef;
-  --ctp-crust: #dce0e8;
-  --ctp-text: #4c4f69;
-  --ctp-subtext1: #5c5f77;
-  --ctp-subtext0: #6c6f85;
-  --ctp-overlay1: #8c8fa1;
-  --ctp-overlay0: #9ca0b0;
-  --ctp-surface2: #acb0be;
-  --ctp-surface1: #bcc0cc;
-  --ctp-surface0: #ccd0da;
-  --ctp-mauve: #8839ef;
-  --ctp-blue: #1e66f5;
-  --ctp-peach: #fe640b;
-  --ctp-yellow: #df8e1d;
-  --ctp-green: #40a02b;
-  --ctp-teal: #179299;
-  --ctp-red: #d20f39;
+  --ctp-base: #f1f6f6;
+  --ctp-mantle: #e7f0ef;
+  --ctp-crust: #d9e6e5;
+  --ctp-text: #35494d;
+  --ctp-subtext1: #495d61;
+  --ctp-subtext0: #5d7175;
+  --ctp-overlay1: #869fa1;
+  --ctp-overlay0: #9ab1b2;
+  --ctp-surface2: #b3c7c7;
+  --ctp-surface1: #c5d6d6;
+  --ctp-surface0: #d5e2e2;
+  --ctp-mauve: #0e9488;
+  --ctp-lavender: #7c6cf0;
+  --ctp-blue: #0ea5e9;
+  --ctp-peach: #ef8b46;
+  --ctp-yellow: #d69a2b;
+  --ctp-green: #3aa655;
+  --ctp-teal: #12a39b;
+  --ctp-red: #dd5068;
 }
 
 :root[data-theme='mocha'] {
-  --ctp-base: #1e1e2e;
-  --ctp-mantle: #181825;
-  --ctp-crust: #11111b;
-  --ctp-text: #cdd6f4;
-  --ctp-subtext1: #bac2de;
-  --ctp-subtext0: #a6adc8;
-  --ctp-overlay1: #7f849c;
-  --ctp-overlay0: #6c7086;
-  --ctp-surface2: #585b70;
-  --ctp-surface1: #45475a;
-  --ctp-surface0: #313244;
-  --ctp-mauve: #cba6f7;
-  --ctp-blue: #89b4fa;
-  --ctp-peach: #fab387;
-  --ctp-yellow: #f9e2af;
-  --ctp-green: #a6e3a1;
-  --ctp-teal: #94e2d5;
-  --ctp-red: #f38ba8;
+  --ctp-base: #152029;
+  --ctp-mantle: #101922;
+  --ctp-crust: #0b1217;
+  --ctp-text: #cfe0e3;
+  --ctp-subtext1: #b6cacd;
+  --ctp-subtext0: #9fb4b7;
+  --ctp-overlay1: #6f8a8d;
+  --ctp-overlay0: #5d787b;
+  --ctp-surface2: #496165;
+  --ctp-surface1: #374f52;
+  --ctp-surface0: #26383b;
+  --ctp-mauve: #2dd4bf;
+  --ctp-lavender: #a99bf5;
+  --ctp-blue: #58c4f0;
+  --ctp-peach: #f2a765;
+  --ctp-yellow: #ecce6a;
+  --ctp-green: #63d089;
+  --ctp-teal: #34d0c4;
+  --ctp-red: #ef6d84;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --ctp-base: #1e1e2e;
-    --ctp-mantle: #181825;
-    --ctp-crust: #11111b;
-    --ctp-text: #cdd6f4;
-    --ctp-subtext1: #bac2de;
-    --ctp-subtext0: #a6adc8;
-    --ctp-overlay1: #7f849c;
-    --ctp-overlay0: #6c7086;
-    --ctp-surface2: #585b70;
-    --ctp-surface1: #45475a;
-    --ctp-surface0: #313244;
-    --ctp-mauve: #cba6f7;
-    --ctp-blue: #89b4fa;
-    --ctp-peach: #fab387;
-    --ctp-yellow: #f9e2af;
-    --ctp-green: #a6e3a1;
-    --ctp-teal: #94e2d5;
-    --ctp-red: #f38ba8;
+    --ctp-base: #152029;
+    --ctp-mantle: #101922;
+    --ctp-crust: #0b1217;
+    --ctp-text: #cfe0e3;
+    --ctp-subtext1: #b6cacd;
+    --ctp-subtext0: #9fb4b7;
+    --ctp-overlay1: #6f8a8d;
+    --ctp-overlay0: #5d787b;
+    --ctp-surface2: #496165;
+    --ctp-surface1: #374f52;
+    --ctp-surface0: #26383b;
+    --ctp-mauve: #2dd4bf;
+    --ctp-lavender: #a99bf5;
+    --ctp-blue: #58c4f0;
+    --ctp-peach: #f2a765;
+    --ctp-yellow: #ecce6a;
+    --ctp-green: #63d089;
+    --ctp-teal: #34d0c4;
+    --ctp-red: #ef6d84;
   }
 }
