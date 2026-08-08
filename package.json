@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "set -a && . ./.env.local && set +a && tsx watch server/dev-server.ts",
+    "dev:local": "concurrently -k -n api,web -c cyan,magenta \"npm:dev:api\" \"vite\"",
+    "dev:vercel": "set -a && . ./.env.local && set +a && vercel dev",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
@@ -38,13 +41,17 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@hono/node-server": "^2.1.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "concurrently": "^10.0.4",
     "drizzle-kit": "^0.31.10",
     "oxlint": "^1.75.0",
+    "tsx": "^4.23.11",
     "typescript": "~6.0.2",
+    "vercel": "^58.9.0",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
   },
