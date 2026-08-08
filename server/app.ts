@@ -9,6 +9,7 @@ import { authMiddleware, type AuthEnv } from './middleware/auth.js'
 import { workspacesRoute } from './routes/workspaces.js'
 import { projectsRoute, workspaceProjectsRoute } from './routes/projects.js'
 import { documentsRoute, projectDocumentsRoute } from './routes/documents.js'
+import { cycleItemRoute, projectCyclesRoute } from './routes/cycles.js'
 import { backlogItemRoute, projectBacklogRoute } from './routes/backlog.js'
 import { tokensRoute } from './routes/tokens.js'
 import { mcpRoute } from './mcp/index.js'
@@ -25,9 +26,12 @@ const app = new Hono<AuthEnv>()
   .use('/projects/*', authMiddleware)
   .route('/projects', projectsRoute)
   .route('/projects', projectDocumentsRoute)
+  .route('/projects', projectCyclesRoute)
   .route('/projects', projectBacklogRoute)
   .use('/documents/*', authMiddleware)
   .route('/documents', documentsRoute)
+  .use('/cycles/*', authMiddleware)
+  .route('/cycles', cycleItemRoute)
   .use('/backlog/*', authMiddleware)
   .route('/backlog', backlogItemRoute)
   .use('/tokens/*', authMiddleware)

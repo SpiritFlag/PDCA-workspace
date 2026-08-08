@@ -15,6 +15,20 @@
       "when": 1786074695061,
       "tag": "0001_misty_grey_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786188517936,
+      "tag": "0002_rich_falcon",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786190038257,
+      "tag": "0003_odd_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }

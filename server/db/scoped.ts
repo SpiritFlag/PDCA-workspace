@@ -1,13 +1,15 @@
 // Design Ref: §9.2 — 전 쿼리가 ownerId 조인을 강제하는 우회 불가 헬퍼. services/*만 이 모듈을 거친다.
 import { and, desc, eq, inArray, like, sql } from 'drizzle-orm'
 import { getDb } from './client.js'
-import { apiTokens, backlogItems, documents, projects, workspaces } from './schema.js'
+import { apiTokens, backlogItems, cycles, documents, projects, workspaces } from './schema.js'
 import type {
   CreateBacklogItemInput,
+  CreateCycleInput,
   CreateDocumentInput,
   CreateProjectInput,
   CreateWorkspaceInput,
   UpdateBacklogItemInput,
+  UpdateCycleInput,
   UpdateDocumentInput,
   UpdateProjectInput,
   UpdateWorkspaceInput,
@@ -235,6 +237,98 @@ export async function listByPrefix(ownerId: string, projectId: string, prefix: s
         like(documents.path, `${prefix}%`),
       ),
     )
+}
+
+// ---- Cycles (ownership는 project->workspace 2단 조인, documents와 동일 패턴) ----
+
+export function listCycles(ownerId: string, projectId: string) {
+  return getDb()
+    .select({ cycle: cycles })
+    .from(cycles)
+    .innerJoin(projects, eq(cycles.projectId, projects.id))
+    .innerJoin(workspaces, eq(projects.workspaceId, workspaces.id))
+    .where(and(eq(cycles.projectId, projectId), eq(workspaces.ownerId, ownerId)))
+    .then((rows) => rows.map((r) => r.cycle))
+}
+
+export async function getCycle(ownerId: string, id: string) {
+  const [row] = await getDb()
+    .select({ cycle: cycles })
+    .from(cycles)
+    .innerJoin(projects, eq(cycles.projectId, projects.id))
+    .innerJoin(workspaces, eq(projects.workspaceId, workspaces.id))
+    .where(and(eq(cycles.id, id), eq(workspaces.ownerId, ownerId)))
+  return row?.cycle ?? null
+}
+
+export async function getCycleByVersion(ownerId: string, projectId: string, version: string) {
+  const [row] = await getDb()
+    .select({ cycle: cycles })
+    .from(cycles)
+    .innerJoin(projects, eq(cycles.projectId, projects.id))
+    .innerJoin(workspaces, eq(projects.workspaceId, workspaces.id))
+    .where(
+      and(
+        eq(cycles.projectId, projectId),
+        eq(cycles.version, version),
+        eq(workspaces.ownerId, ownerId),
+      ),
+    )
+  return row?.cycle ?? null
+}
+
+export async function getCycleByName(ownerId: string, projectId: string, name: string) {
+  const [row] = await getDb()
+    .select({ cycle: cycles })
+    .from(cycles)
+    .innerJoin(projects, eq(cycles.projectId, projects.id))
+    .innerJoin(workspaces, eq(projects.workspaceId, workspaces.id))
+    .where(
+      and(eq(cycles.projectId, projectId), eq(cycles.name, name), eq(workspaces.ownerId, ownerId)),
+    )
+  return row?.cycle ?? null
+}
+
+export async function createCycle(ownerId: string, projectId: string, input: CreateCycleInput) {
+  const project = await getProject(ownerId, projectId)
+  if (!project) return { error: 'PROJECT_NOT_FOUND' as const }
+  const dupVersion = await getCycleByVersion(ownerId, projectId, input.version)
+  if (dupVersion) return { error: 'VERSION_TAKEN' as const, version: input.version }
+  if (input.name) {
+    const dupName = await getCycleByName(ownerId, projectId, input.name)
+    if (dupName) return { error: 'NAME_TAKEN' as const, name: input.name }
+  }
+  const [row] = await getDb()
+    .insert(cycles)
+    .values({ projectId, ...input })
+    .returning()
+  return { cycle: row }
+}
+
+export async function updateCycle(ownerId: string, id: string, input: UpdateCycleInput) {
+  const existing = await getCycle(ownerId, id)
+  if (!existing) return { error: 'NOT_FOUND' as const }
+  if (input.version && input.version !== existing.version) {
+    const dup = await getCycleByVersion(ownerId, existing.projectId, input.version)
+    if (dup) return { error: 'VERSION_TAKEN' as const, version: input.version }
+  }
+  if (input.name && input.name !== existing.name) {
+    const dup = await getCycleByName(ownerId, existing.projectId, input.name)
+    if (dup) return { error: 'NAME_TAKEN' as const, name: input.name }
+  }
+  const [row] = await getDb()
+    .update(cycles)
+    .set({ ...input, updatedAt: new Date() })
+    .where(eq(cycles.id, id))
+    .returning()
+  return { cycle: row }
+}
+
+export async function deleteCycle(ownerId: string, id: string) {
+  const existing = await getCycle(ownerId, id)
+  if (!existing) return false
+  await getDb().delete(cycles).where(eq(cycles.id, id))
+  return true
 }
 
 // ---- Backlog Items (ownership는 project->workspace 2단 조인, documents와 동일 패턴) ----
