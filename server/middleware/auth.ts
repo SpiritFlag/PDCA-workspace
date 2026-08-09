@@ -26,7 +26,8 @@ function getJwks() {
   return _jwks
 }
 
-function unauthorized(message: string) {
+// Design Ref: §10 코딩 컨벤션 — mcp-auth.ts가 이 헬퍼를 재사용한다(401 형식 사본 금지).
+export function unauthorized(message: string) {
   return new HTTPException(401, {
     res: Response.json({ error: { code: 'UNAUTHORIZED', message } }, { status: 401 }),
   })

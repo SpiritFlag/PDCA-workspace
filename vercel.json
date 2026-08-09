@@ -1,5 +1,6 @@
 {
   "routes": [
+    { "src": "^/\\.well-known/(.+)$", "dest": "/api/[...route]?...route=.well-known/$1" },
     { "src": "^/api/(.+)$", "dest": "/api/[...route]?...route=$1" },
     { "handle": "filesystem" },
     { "src": "^(?:/((?!api/|src/|shared/|server/|@vite|@react-refresh|@id/|@fs/|node_modules/).*))$", "dest": "/index.html" }
