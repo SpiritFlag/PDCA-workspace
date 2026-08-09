@@ -146,7 +146,7 @@ npm run dev:local      # API(tsx watch) + 웹(vite) 동시 기동 — 평소엔 
 
 ## MCP 연동
 
-`/api/mcp`가 stateless Streamable HTTP MCP 서버다. PAT로 인증하며 툴 10개를 노출한다.
+`/api/mcp`가 stateless Streamable HTTP MCP 서버다. 툴 10개를 노출한다.
 
 ```
 project_list · document_list · document_read · document_write
@@ -154,10 +154,14 @@ backlog_list · backlog_create · backlog_update · backlog_reorder
 cycle_list · cycle_read
 ```
 
-cycles는 **읽기 전용**이다(쓰기 툴 미등록). Claude Code에서는 `Authorization: Bearer` 헤더로,
-claude.ai 웹 커넥터에서는 커스텀 헤더를 넣을 자리가 없어 `?token=` 쿼리파라미터로 붙는다 —
-후자는 Vercel 로그에 평문이 남는 알려진 트레이드오프이며 OAuth 승격 전까지 감내 중이다
-(자세한 내용은 배포 체크리스트 §5).
+cycles는 **읽기 전용**이다(쓰기 툴 미등록).
+
+**인증(v0.2.0~)**: **OAuth 2.1**(Clerk 위임, DCR 자동 등록)과 **PAT**가 병행 동작한다.
+claude.ai 웹 커넥터는 URL만 입력하면 DCR이 자동으로 클라이언트를 등록하고 브라우저 동의
+화면을 거쳐 연결된다 — Client ID/Secret을 직접 넣을 필요가 없다. Claude Code 등 기존 연결은
+`Authorization: Bearer <PAT>` 헤더로 계속 붙는다. claude.ai가 커스텀 헤더를 못 넣던 시절의
+잔재인 `?token=` 쿼리파라미터 경로도 **아직 남아있다**(Vercel 로그에 평문이 남는 알려진
+트레이드오프) — legacy 경로 완전 제거는 `v0.2.1`에서 예정돼 있다.
 
 **프롬프트(v0.1.9~)**: 반복 워크플로 지침을 서버에 등록해 클라이언트가 슬래시 커맨드로
 불러 쓴다 — `/mcp__<서버명>__backlog_sync`(사이클 종료 후 백로그 최신화), `__make_cc_prompt`
