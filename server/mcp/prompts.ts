@@ -7,18 +7,27 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 export const BACKLOG_SYNC_TEXT = `방금 닫힌 PDCA 사이클을 기준으로 백로그를 최신 상태로 되돌린다. 아래 순서를 그대로 따른다.
 
-0. 대상 확정
-   - cycleName이 주어졌으면 그 사이클을 대상으로 한다.
-   - 비었으면 cycle_list로 버전 목록을 받아 가장 높은 버전의 name을 후보로 삼고,
-     "이번 대상은 <사이클명>이 맞나?"를 한 줄로 확인받은 뒤 진행한다. 추측으로 진행하지 않는다.
+0. 프로젝트 확정
+   - project_list로 워크스페이스·프로젝트 후보를 확보한다.
+   - projectName이 주어졌으면 그 이름과 대조해 한 프로젝트로 좁힌다. 이름이 여러 건과
+     매칭되면(같은 이름이 다른 워크스페이스에 있는 경우 등) 되묻는다.
+   - 비었으면 후보 전체를 나열해 형이 고르게 한다. 하나뿐이어도 임의로 확정하지 않고
+     "이 프로젝트가 맞나?"로 확인받는다 — 워크스페이스가 늘어날 수 있어 지금 하나인 것이
+     계속 하나라는 보장이 없다.
 
-1. 근거 읽기
+1. 사이클 확정
+   - cycleName이 주어졌으면 그 사이클을 대상으로 한다.
+   - 비었으면 그 프로젝트의 cycle_list로 버전 목록을 받아 가장 높은 버전의 name을 후보로
+     삼고, "이번 대상은 <사이클명>이 맞나?"를 한 줄로 확인받은 뒤 진행한다. 추측으로
+     진행하지 않는다.
+
+2. 근거 읽기
    - document_list로 경로를 확인하고 document_read로 그 사이클의 report를 읽는다.
      판정이 갈리는 항목이 있으면 analysis도 읽는다.
    - backlog_list를 상태 필터 없이(전 상태) 호출해 전건을 확보한다.
      열린 항목만 보면 이미 닫힌 항목과의 중복 생성을 놓친다.
 
-2. 종료 상태 갈라 찍기
+3. 종료 상태 갈라 찍기
    - 이 사이클이 겨냥해서 해결한 항목 → done
    - 의도한 건 아닌데 다른 작업에 딸려 해결됐거나 필요 자체가 없어진 항목 → resolved
    - 두 상태의 정의는 이 서버 backlog_update 툴의 description에 적힌 것을 그대로 따른다.
@@ -26,47 +35,53 @@ export const BACKLOG_SYNC_TEXT = `방금 닫힌 PDCA 사이클을 기준으로 �
    - closedOn은 사이클 완료일(YYYY-MM-DD).
    - todo로 되돌리는 전환은 사람 전용이므로 요청하지 않는다.
 
-3. detail 갱신 — 원안 보존
+4. detail 갱신 — 원안 보존
    - 상태를 바꾸거나 범위를 줄일 때 detail 맨 앞에 한 줄 블록을 덧붙인다.
        [YYYY-MM-DD 완료|해소|축소|갱신 — 근거: <사이클명> <SC/FR/§ 번호>]
    - 기존 본문은 지우지 않는다. 원안이 뒤로 밀리면 "(원안)" 접두를 붙여 아래에 남긴다.
 
-4. 신규 항목 생성
+5. 신규 항목 생성
    - report의 이월·신규 제안(등급별 이월 · 회고 Try · 다음 사이클 후보)을 각각 항목으로 만든다.
-   - 만들기 전에 1단계에서 확보한 전건과 제목·detail을 대조해 이미 있는 항목인지 먼저 확인한다.
+   - 만들기 전에 2단계에서 확보한 전건과 제목·detail을 대조해 이미 있는 항목인지 먼저 확인한다.
      있으면 새로 만들지 말고 그 항목의 detail을 갱신한다.
    - detail에 출처를 반드시 남긴다: (<사이클명> report §<번호>)
    - openedOn은 사이클 완료일. 상태는 항상 todo에서 시작한다.
 
-5. 전제가 바뀐 기존 항목 재평가
-   - 이번 사이클로 근거나 범위가 달라진 항목은 상태를 바꾸지 말고 3단계 형식으로
+6. 전제가 바뀐 기존 항목 재평가
+   - 이번 사이클로 근거나 범위가 달라진 항목은 상태를 바꾸지 말고 4단계 형식으로
      [… 축소] 또는 [… 갱신]만 기록한다.
 
-6. 판단 보류
+7. 판단 보류
    - done인지 resolved인지 갈리는 항목, 여러 건이 묶여 통째로 닫을 수 없는 항목,
      폐기 여부가 사람 결정인 항목은 바꾸지 말고 질문으로 남긴다.
 
-7. 보고
+8. 보고
+   - 대상 프로젝트·사이클명을 한 줄로 밝힌다.
    - 처리 요약 표를 낸다: done / resolved / 신규 / 갱신 각 구획에 항목 제목 한 줄씩.
    - 이어서 보드 집계(상태별 건수)를 낸다.
-   - 6단계의 질문이 있으면 표 아래에 번호를 매겨 따로 낸다.`
+   - 7단계의 질문이 있으면 표 아래에 번호를 매겨 따로 낸다.`
 
 export const MAKE_CC_PROMPT_TEXT = `백로그 항목을 Claude Code가 바로 실행할 수 있는 "Plan 작성 지시서"로 바꾼다.
 결과물은 지시서 텍스트 한 덩어리이며, 이 대화에서 설계나 구현을 시작하지 않는다.
 
-0. 대상 확정
-   - targets가 주어졌으면 그것으로 항목을 특정한다(쉼표 구분, 항목 id 또는 제목 일부).
-     제목 일부면 backlog_list 결과와 대조해 한 건으로 좁히고, 후보가 여럿이면 되묻는다.
-   - 비었으면 backlog_list로 열린 항목을 훑고 우선순위·의존 관계를 근거로 후보를 2~3건
-     제시해 형이 고르게 한다. 임의로 정하지 않는다.
-   - cycleName이 주어졌으면 그 이름을 쓰고, 비었으면 3번 규칙으로 만들어 제안한다.
+0. 프로젝트 확정
+   - project_list로 워크스페이스·프로젝트 후보를 확보한다.
+   - projectName이 주어졌으면 그 이름과 대조해 한 프로젝트로 좁힌다. 여러 건과 매칭되면 되묻는다.
+   - 비었으면 후보 전체를 나열해 형이 고르게 한다. 하나뿐이어도 확인받는다.
 
-1. 근거 확보
+1. 대상 확정
+   - targets가 주어졌으면 그것으로 항목을 특정한다(쉼표 구분, 항목 id 또는 제목 일부).
+     제목 일부면 그 프로젝트의 backlog_list 결과와 대조해 한 건으로 좁히고, 후보가 여럿이면 되묻는다.
+   - 비었으면 그 프로젝트의 backlog_list로 열린 항목을 훑고 우선순위·의존 관계를 근거로
+     후보를 2~3건 제시해 형이 고르게 한다. 임의로 정하지 않는다.
+   - cycleName이 주어졌으면 그 이름을 쓰고, 비었으면 4번 규칙으로 만들어 제안한다.
+
+2. 근거 확보
    - 대상 항목의 detail을 끝까지 읽는다. detail이 가리키는 문서(report §번호 등)가 있으면
      document_read로 원문까지 확인한다.
    - 백로그 detail의 요약만으로 지시서를 쓰지 않는다.
 
-2. 지시서 구성 — 아래 8개를 모두 포함한다
+3. 지시서 구성 — 아래 8개를 모두 포함한다
    1) 산출물 — docs/PDCA/<연월>/<사이클명>/<사이클명>.plan.md 한 개만.
       착수 전 \`git log -1 -- docs/RULE.md\`로 RULE.md 최신 확인 지시.
       템플릿은 직전 사이클 문서 구조를 따르게 한다. 코드 수정 금지, 커밋 금지를 명시한다.
@@ -83,17 +98,18 @@ export const MAKE_CC_PROMPT_TEXT = `백로그 항목을 Claude Code가 바로 �
       사람 손이 필요한 항목의 비율이 높으면 그 사실을 지시서에 미리 적는다.
    8) 끝맺음 — "작성 완료 후 문서 경로만 보고하고, 승인 전에 Design이나 구현에 착수하지 않는다."
 
-3. 사이클명 규칙
+4. 사이클명 규칙
    - 동사 어휘 관례를 따른다: refine(이월 마감) · expand(경계·반경 확장) ·
      enhance(기존 기능 개선) · adopt(외부 도입).
    - 형태는 <동사>-<대상>의 케밥 케이스. 날짜와 버전은 넣지 않는다.
 
-4. 주의
+5. 주의
    - PAT·토큰·개인정보류를 예시에 넣지 않는다.
    - 지시서는 형이 그대로 복사해 Claude Code에 붙여넣을 수 있어야 한다.
      이 대화에서만 통하는 지시대명사("아까 그거", "위에서 말한 것")를 쓰지 않는다.
 
-5. 출력
+6. 출력
+   - 대상 프로젝트를 한 줄로 밝힌다.
    - 지시서 본문만 낸다. 앞뒤 설명은 한 줄 이내로 줄인다.`
 
 /** Design Ref: §5.2 D-97 — 준 인자만, 준 순서대로 'k=v' 공백 join. 무인자면 본문 그대로 반환 */
@@ -111,7 +127,14 @@ export function registerPrompts(server: McpServer) {
       title: '백로그 최신화',
       description:
         '사이클을 닫은 직후 백로그를 최신 상태로 되돌릴 때. 종료 상태 갈라 찍기 · 이월 항목 생성 · 낡은 항목 재평가를 한 번에 처리한다',
+      // Decision: [Do] module-3 실증(형 관측) — 워크스페이스·프로젝트가 여러 개(실측 2/4)인데
+      // 프로젝트를 특정하는 인자가 없었다. projectName을 cycleName보다 먼저 둔다(CC 위치인자
+      // 관례상 대상 결정이 사이클 결정보다 선행해야 함).
       argsSchema: {
+        projectName: z
+          .string()
+          .optional()
+          .describe('대상 프로젝트명. 예: PDCA-workspace. 비우면 project_list 후보를 확인받는다'),
         cycleName: z
           .string()
           .optional()
@@ -120,11 +143,11 @@ export function registerPrompts(server: McpServer) {
           ),
       },
     },
-    ({ cycleName }) => ({
+    ({ projectName, cycleName }) => ({
       messages: [
         {
           role: 'user',
-          content: { type: 'text', text: withArgsPrefix(BACKLOG_SYNC_TEXT, { cycleName }) },
+          content: { type: 'text', text: withArgsPrefix(BACKLOG_SYNC_TEXT, { projectName, cycleName }) },
         },
       ],
     }),
@@ -137,6 +160,10 @@ export function registerPrompts(server: McpServer) {
       description:
         '백로그 항목을 Claude Code가 그대로 실행할 수 있는 Plan 작성 지시서로 바꿀 때. 스코프 고정 · 실측 필수 표 · P-1 표 · 승인 대기 끝맺음을 포함해 생성한다',
       argsSchema: {
+        projectName: z
+          .string()
+          .optional()
+          .describe('대상 프로젝트명. 예: PDCA-workspace. 비우면 project_list 후보를 확인받는다'),
         targets: z
           .string()
           .optional()
@@ -144,11 +171,14 @@ export function registerPrompts(server: McpServer) {
         cycleName: z.string().optional().describe('새 사이클명. 비우면 어휘 관례로 제안한다'),
       },
     },
-    ({ targets, cycleName }) => ({
+    ({ projectName, targets, cycleName }) => ({
       messages: [
         {
           role: 'user',
-          content: { type: 'text', text: withArgsPrefix(MAKE_CC_PROMPT_TEXT, { targets, cycleName }) },
+          content: {
+            type: 'text',
+            text: withArgsPrefix(MAKE_CC_PROMPT_TEXT, { projectName, targets, cycleName }),
+          },
         },
       ],
     }),

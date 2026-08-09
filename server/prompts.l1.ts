@@ -32,7 +32,7 @@ describe.skipIf(!hasDb)('prompts L1 (실 dev DB)', () => {
 
   afterAll(cleanup)
 
-  it('p1 prompts/list — 정확히 2건, 인자 전부 required:false, make_cc_prompt 순서 [targets, cycleName]', async () => {
+  it('p1 prompts/list — 정확히 2건, 인자 전부 required:false, 순서는 projectName 먼저', async () => {
     const res = await rpc(token, 'prompts/list')
     const json = (await res.json()) as ListPromptsEnvelope
     const prompts = json.result?.prompts ?? []
@@ -41,12 +41,13 @@ describe.skipIf(!hasDb)('prompts L1 (실 dev DB)', () => {
     const sync = prompts.find((p) => p.name === 'backlog_sync')
     expect(sync?.title).toBeTruthy()
     expect(sync?.description).toBeTruthy()
+    expect(sync?.arguments?.map((a) => a.name)).toEqual(['projectName', 'cycleName'])
     expect(sync?.arguments?.every((a) => a.required === false)).toBe(true)
 
     const cc = prompts.find((p) => p.name === 'make_cc_prompt')
     expect(cc?.title).toBeTruthy()
     expect(cc?.description).toBeTruthy()
-    expect(cc?.arguments?.map((a) => a.name)).toEqual(['targets', 'cycleName'])
+    expect(cc?.arguments?.map((a) => a.name)).toEqual(['projectName', 'targets', 'cycleName'])
     expect(cc?.arguments?.every((a) => a.required === false)).toBe(true)
   })
 
@@ -57,11 +58,11 @@ describe.skipIf(!hasDb)('prompts L1 (실 dev DB)', () => {
     expect(result.text).toBe(BACKLOG_SYNC_TEXT)
   })
 
-  it('p3 prompts/get backlog_sync {cycleName} — 접두줄 + 본문', async () => {
-    const result = await getPrompt(token, 'backlog_sync', { cycleName: 'hns-c1' })
+  it('p3 prompts/get backlog_sync {projectName, cycleName} — 접두줄 순서·값 그대로 + 본문', async () => {
+    const result = await getPrompt(token, 'backlog_sync', { projectName: 'hns-p1', cycleName: 'hns-c1' })
     expect(result.ok).toBe(true)
     if (!result.ok) throw new Error('unreachable')
-    expect(result.text).toBe(`[인자] cycleName=hns-c1\n\n${BACKLOG_SYNC_TEXT}`)
+    expect(result.text).toBe(`[인자] projectName=hns-p1 cycleName=hns-c1\n\n${BACKLOG_SYNC_TEXT}`)
   })
 
   it('p4 prompts/get make_cc_prompt 무인자 — 본문 상수와 완전일치', async () => {
@@ -71,11 +72,24 @@ describe.skipIf(!hasDb)('prompts L1 (실 dev DB)', () => {
     expect(result.text).toBe(MAKE_CC_PROMPT_TEXT)
   })
 
-  it('p5 prompts/get make_cc_prompt {targets, cycleName} — 접두줄 순서·값 그대로 + 본문', async () => {
-    const result = await getPrompt(token, 'make_cc_prompt', { targets: 'hns-t1,hns-t2', cycleName: 'hns-c2' })
+  it('p5 prompts/get make_cc_prompt {projectName, targets, cycleName} — 접두줄 순서·값 그대로 + 본문', async () => {
+    const result = await getPrompt(token, 'make_cc_prompt', {
+      projectName: 'hns-p2',
+      targets: 'hns-t1,hns-t2',
+      cycleName: 'hns-c2',
+    })
     expect(result.ok).toBe(true)
     if (!result.ok) throw new Error('unreachable')
-    expect(result.text).toBe(`[인자] targets=hns-t1,hns-t2 cycleName=hns-c2\n\n${MAKE_CC_PROMPT_TEXT}`)
+    expect(result.text).toBe(
+      `[인자] projectName=hns-p2 targets=hns-t1,hns-t2 cycleName=hns-c2\n\n${MAKE_CC_PROMPT_TEXT}`,
+    )
+  })
+
+  it('p9 prompts/get backlog_sync {projectName만} — 준 인자만 접두줄에 포함', async () => {
+    const result = await getPrompt(token, 'backlog_sync', { projectName: 'hns-p3' })
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('unreachable')
+    expect(result.text).toBe(`[인자] projectName=hns-p3\n\n${BACKLOG_SYNC_TEXT}`)
   })
 
   it('p6 prompts/get 없는 이름 — -32602', async () => {
