@@ -36,6 +36,11 @@ export const clerkProxyRoute = new Hono().all('/*', async (c) => {
     method: c.req.method,
     headers,
     body: ['GET', 'HEAD'].includes(c.req.method) ? undefined : await c.req.raw.blob(),
+    // Decision: [Do] 기본값(follow)이면 fetch()가 서버 안에서 리다이렉트를 몰래 다 따라가버려,
+    // 브라우저 주소창은 그대로인데 최종 페이지의 상대경로 리소스는 엉뚱한 origin 기준이 된다
+    // (실측 2026-08-10 — OAuth 인가 화면 진입 시 "Page not found"). 3xx는 그대로 브라우저에
+    // 넘겨서 실제 내비게이션이 일어나게 한다.
+    redirect: 'manual',
   })
 
   // Decision: [Do] fetch()의 Response를 그대로 반환하면 Vercel Node 함수 경계를 넘으며 body
