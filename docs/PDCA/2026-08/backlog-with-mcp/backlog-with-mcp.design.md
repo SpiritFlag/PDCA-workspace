@@ -112,6 +112,8 @@ version: 1.3
    - "에러 코드 통일"이 이번 사이클에서 처리됨 → backlog_update(status: 'resolved', closed_on)
    - 새 발견 항목 → backlog_create(title, priority, detail, opened_on)
    - doing으로 바꾸려는 시도 → TRANSITION_DENIED 에러 (서버가 거부, FR-19)
+     **(사후 2026-08-09 개정: 6차 expand-mcp-agency D-42 — doing·done은 이제 클로드도 직접
+     찍는다. 거부되는 건 todo 복귀뿐)**
 ⑥ 형: 브라우저 /backlog 열어 결과 확인 → 드래그로 순서 조정 (PUT /order)
 ⑦ 형: 카드 하나 골라 배지 클릭 → 대기→진행 (형 전용 전이, Q10a)
 ```
@@ -184,6 +186,9 @@ export const apiTokens = pgTable('api_tokens', {
 | `last_used_at` 갱신 | 인증 성공 시 매번 UPDATE (단일 유저라 부하 무의미) | RK-02 이상 감지 |
 
 ### 3.3 전이 모듈 (`shared/transition.ts` — 순수, 급소)
+**(사후 2026-08-09 개정: 6차 D-42·D-44·D-45 — 아래 코드 블록은 원문. 실물은 허용 목적지가
+4값(`MCP_ALLOWED_TARGETS` export)으로 넓어졌고 `STATUS_MEANING` 상수가 추가됐다. 최신 전문은
+`shared/transition.ts` 참조)**
 
 ```typescript
 // Design Ref: §3.3 — Q10a·Q10b의 코드화. 서버 서비스·MCP 툴·UI 배지가 전부 이것만 호출
@@ -202,13 +207,14 @@ export function isClosed(status: BacklogStatus): boolean  // done|resolved|dropp
 | # | from → to | actor | 기대 |
 |---|-----------|:-----:|:----:|
 | T1 | todo → doing | user | ✅ (착수, Q10a) |
-| T2 | todo → doing | mcp | ❌ **TRANSITION_DENIED의 원천** |
-| T3 | doing → done | user | ✅ / mcp ❌ |
+| T2 | todo → doing | mcp | ❌ **TRANSITION_DENIED의 원천** **(사후 2026-08-09 개정: 6차 expand-mcp-agency D-42 — mcp도 ✅로 반전. TRANSITION_DENIED의 원천은 이제 T9, todo 복귀 쪽으로 이동)** |
+| T3 | doing → done | user | ✅ / mcp ❌ **(사후 2026-08-09 개정: 6차 D-42 — mcp도 ✅로 반전)** |
 | T4 | todo → resolved | mcp | ✅ (해소, Q10b) |
 | T5 | todo → dropped | mcp | ✅ |
-| T6 | resolved → todo | user | ✅ (재개) / mcp ❌ |
+| T6 | resolved → todo | user | ✅ (재개) / mcp ❌ **(6차에도 유지 — 잔여 경계, D-42)** |
 | T7 | done → doing | user | ✅ (재작업 — user는 제한 없음) |
 | T8 | x → x (동일) | 둘 다 | ✅ (내용만 수정하는 PATCH 통과용) |
+| T9·T10 | done→todo·dropped→todo | mcp | ❌ **(사후 2026-08-09 신설: 6차 D-42 — TRANSITION_DENIED의 원천이 여기로 이동)** |
 
 ### 3.4 정렬 갱신 SQL (D-10, RK-04 해소)
 
@@ -282,7 +288,7 @@ Authorization: Bearer <token>  (없으면 ?token=<pdcaw_...> 폴백, D-18)
 | 인증 | authMiddleware가 MCP 핸들러보다 먼저 — 미인증이면 JSON-RPC까지 못 간다(C9) |
 | 연결 확인 | `claude mcp add --transport http pdca-workspace https://<도메인>/api/mcp --header "Authorization: Bearer pdcaw_..."` — 일부 CC 버전의 헤더 미전달 이슈가 있어 **스파이크에서 인증 포함으로 검증** |
 
-### 4.4 MCP 툴 명세 (8개)
+### 4.4 MCP 툴 명세 (8개) **(사후 2026-08-09: 6차 expand-mcp-agency에서 10개로 확장 — `cycle_list`·`cycle_read` 신설, D-46)**
 
 각 description은 **언제 호출하는지**를 쓴다(RK-07). 아래 표의 설명 열이 그대로 툴 description 초안.
 
@@ -294,11 +300,16 @@ Authorization: Bearer <token>  (없으면 ?token=<pdcaw_...> 폴백, D-18)
 | `document_write` | `projectId, path, title, kind, pdcaStage?, content` | 경로 upsert. **기존 문서가 있으면 덮어쓰며 응답에 `{ replaced: true, previousLength }` 포함**(RK-03) |
 | `backlog_list` | `projectId, status?[]` | 백로그 조회. 정리 작업 전 기존 항목 전체를 파악할 때 (기본: 전 상태) |
 | `backlog_create` | `projectId, title, priority, detail?, openedOn` | 새 백로그 항목 생성. **status는 항상 todo로 시작**(입력에서 제외) |
-| `backlog_update` | `id, title?, priority?, detail?, openedOn?, closedOn?, status?` | 항목 갱신. **status는 resolved(다른 작업으로 자연 해소됨)·dropped(안 하기로 판단)만 지정 가능 — doing·done은 사용자 전용이라 거부된다** |
+| `backlog_update` | `id, title?, priority?, detail?, openedOn?, closedOn?, status?` | 항목 갱신. **status는 resolved(다른 작업으로 자연 해소됨)·dropped(안 하기로 판단)만 지정 가능 — doing·done은 사용자 전용이라 거부된다** **(사후 2026-08-09 개정: 6차 D-42·D-44 — doing·done도 지정 가능. 거부되는 건 todo 복귀뿐, description은 `STATUS_MEANING`에서 조립)** |
 | `backlog_reorder` | `projectId, ids[]` | 우선순위 재배열이 명시적으로 요청됐을 때만. 평소 순서는 사용자가 UI에서 관리한다 |
+| `cycle_list` **(사후 신설)** | `projectId` | 프로젝트의 릴리즈(버전) 목록. 릴리즈노트 본문은 제외(`hasReleaseNote`만) |
+| `cycle_read` **(사후 신설)** | `projectId, version` | 버전 하나의 릴리즈노트 본문을 읽는다 |
 
 - `backlog_update`의 status를 zod `enum(['resolved','dropped'])`로 **스키마부터 좁힌다** —
   1차 방어. 서비스의 `canTransition(from, to, 'mcp')`가 2차 방어(심층 방어, RK-08).
+  **(사후 2026-08-09 개정: 6차 D-44 — enum이 4값(`MCP_ALLOWED_TARGETS`)으로 넓어지고, 그
+  4값에서 파생된다. 1·2차 방어의 허용 집합이 같은 원천이라 todo 요청은 1차(zod) 단계에서
+  거부되고 2차(canTransition)엔 도달하지 않는다 — 실행 중 발견, expand-mcp-agency analysis 참조)**
 - 거부는 §6.3 매핑대로 **isError 툴 결과 + 코드·사유** — 조용한 무시 금지(Plan §7.5).
 - 미노출 목록(재확인): 전 리소스 delete, workspace·project create/update. 툴 결과는 전부
   텍스트 콘텐츠(JSON 직렬화) — MCP 리소스·프롬프트 미사용(스코프 외).
@@ -418,7 +429,7 @@ REST는 1차 사이클 규격 유지: `{ error: { code, message, details? } }`. 
 | 400 | `VALIDATION_ERROR` | zod 실패, reorder id 집합 불일치 | 폼 fieldErrors / 토스트 |
 | 401 | `UNAUTHORIZED` | JWT·PAT 없음/만료/폐기됨 | 로그인 리다이렉트 (FR-21) |
 | 403 | `FORBIDDEN` | 요청 주체는 확인됐으나 그 행위가 금지됨 — **MCP Origin 위반** (refine-mcp-hardening S2, D-23) | (MCP 전용 — UI에선 발생 안 함) |
-| 403 | `TRANSITION_DENIED` | `canTransition` false — **MCP가 doing/done 시도 (FR-19)** | (MCP 전용 — UI에선 발생 안 함) |
+| 403 | `TRANSITION_DENIED` | `canTransition` false — **MCP가 doing/done 시도 (FR-19)** **(사후 2026-08-09 개정: 6차 D-42 — 발생 조건이 "MCP가 todo 복귀 시도"로 좁아짐. doing/done은 이제 허용)** | (MCP 전용 — UI에선 발생 안 함) |
 | 404 | `NOT_FOUND` | 자원 없음 또는 타인 소유 (구분 안 함) | 목록 복귀 / 새로 만들기 |
 | 409 | `CONFLICT` | 유니크 충돌 전반. `details.target`으로 대상 명시 (`path`, `slug`, …) | 대상별 안내 (문서: 덮어쓰기/경로수정) |
 | 500 | `INTERNAL` | 서버 오류 | 토스트 + 재시도 |
@@ -460,6 +471,14 @@ class ServiceError extends Error { constructor(public code: ErrorCode, message, 
 - [ ] **툴 표면 최소화 (Q4)**: delete 계열 전면 미노출 — `tools/list` 실응답으로 검증(NFR).
 - [ ] **전이 심층 방어 (FR-19)**: zod enum 협소화(1차) + `canTransition` 서비스 검증(2차).
       스키마를 우회한 raw JSON-RPC 호출도 2차에서 걸린다. C8로 실증.
+      **(사후 2026-08-09 정정: 6차 expand-mcp-agency module-2 구현 중 발견 — D-44로 zod enum이
+      `MCP_ALLOWED_TARGETS`에서 파생되면서 1차(zod)와 2차(canTransition)의 허용 집합이
+      설계상 항상 일치하게 됐다. 그 결과 MCP 경로에서 2차 방어는 사실상 도달 불가능하다 —
+      1차에서 걸러진 값은 2차에 도달할 수 없고, 1차를 통과한 값은 2차가 항상 승인한다.
+      "스키마 우회 시 2차가 걸러준다"는 이 문장의 전제는 **2차부터 이미 성립하지 않았다**
+      (당시 2값 enum도 canTransition의 2값 허용과 같은 집합이었다). 형이 이 구조를 그대로
+      유지하기로 결정(expand-mcp-agency Plan §6.2 검증 논의) — 거부 자체는 여전히 명시적
+      에러(zod validation error)로 이뤄져 "조용한 무시 금지" 원칙은 충족된다)**
 - [ ] **인가 스코프**: 백로그·토큰 쿼리도 기존 `scoped.ts` 경유 — PAT로 인증해도 ownerId
       스코프는 동일하게 강제. 타인 자원 404.
 - [ ] **detail 마크다운 XSS**: `MarkdownView` 재사용으로 1차 사이클 sanitize 체계 그대로 적용.
@@ -492,7 +511,7 @@ class ServiceError extends Error { constructor(public code: ErrorCode, message, 
 | 3 | PAT 폐기 → 같은 토큰 재호출 | 401 (**C5** 후반) |
 | 4 | JWT로 백로그 CRUD 1회전 | 각 2xx (**C1** API층) |
 | 5 | `PATCH /backlog/:id` status doing (user) | 200 — user는 허용 |
-| 6 | MCP `backlog_update` status doing | isError + `TRANSITION_DENIED` (**C8**) |
+| 6 | MCP `backlog_update` status doing | isError + `TRANSITION_DENIED` (**C8**) **(사후 2026-08-09 개정: 6차 D-42 — doing은 이제 성공. 이 시나리오의 자리는 6차 `mcp.l1.ts` m5(`done→todo` 거부)로 이동했다)** |
 | 7 | MCP `backlog_update` status resolved | 성공 (Q10b) |
 | 8 | `PUT /order` — 전체 id 셔플 | 200, 재조회 시 그 순서 |
 | 9 | `PUT /order` — id 하나 누락 | 400 `VALIDATION_ERROR` (§3.4 집합 검증) |
@@ -509,7 +528,7 @@ class ServiceError extends Error { constructor(public code: ErrorCode, message, 
 | 1 | `claude mcp add`로 프로덕션 MCP 연결 | `/mcp`에 connected, 툴 8개 (**C6**) |
 | 2 | 클로드에게 "cogmo-report PDCA 문서 훑고 백로그 정리해줘" | document_read 실행 흔적 |
 | 3 | 클로드가 최소 1건 해소 + 최소 1건 신규 생성 | DB 반영 + 브라우저 확인 |
-| 4 | (유도) 클로드에게 "이거 진행으로 바꿔줘" | 거부 메시지를 클로드가 형에게 전달 (**C8** 실전) |
+| 4 | (유도) 클로드에게 "이거 진행으로 바꿔줘" | 거부 메시지를 클로드가 형에게 전달 (**C8** 실전) **(사후 2026-08-09 개정: 6차 D-42 — "진행"(doing)은 이제 성공한다. C8 실증의 자리는 6차 Design §8.6-2("방금 완료한 항목 다시 대기로 되돌려줘" → 거부)로 이동)** |
 | 5 | 형이 브라우저에서 드래그로 순서 조정 | 저장·유지 (**C2**) |
 | 6 | 형이 배지로 대기→진행 전환 | 완주 (**C7**) |
 
@@ -627,3 +646,4 @@ class ServiceError extends Error { constructor(public code: ErrorCode, message, 
 | 0.2 | 2026-08-07 | Check 단계 중 D-18 추가: claude.ai 웹 커넥터 대응으로 MCP 인증에 `?token=` 쿼리파라미터 폴백(PAT 한정) 추가. §4.2 갱신 | cogmo |
 | 0.3 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클 module-1)** §6.1에 403 `FORBIDDEN` 행 추가 — Origin 거부가 표를 안 지나는 리터럴 응답이던 균열(I-3)을 코드(`mcp/index.ts`가 `ServiceError('FORBIDDEN', ...)` throw)와 같은 커밋에서 정합화(RK-12) | cogmo |
 | 0.4 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클 module-4, S5)** §6.3에 FR-21 실구현 위치 정정 추가(M-1) — Design은 QueryClient onError를 지정했지만 실제는 `src/lib/api.ts`의 `authedFetch` | cogmo |
+| 0.5 | 2026-08-09 | **(사후 개정, expand-mcp-agency 사이클 6차 D-42·D-44·D-46)** Q10b 권한 경계 개정 반영 6곳 — §3.3 T1~T8 표(T2·T3 반전 병기 + T9·T10 신설 병기) / §2.2 데이터 흐름 ⑤ / §4.4 툴 명세(10개로 확장 병기, `backlog_update` 행 + zod 협소화 문단) / §6.1 `TRANSITION_DENIED` 행 / §8.2 L1 #6 / §8.3 L3 4단계. 전부 원문 유지 + 사후 문구 병기(4차 D-25 형식) | cogmo |
