@@ -1,9 +1,10 @@
 // module-3: 문서 제목 클릭 시 뷰어(DocumentViewPage)로 이동.
+// Design Ref: §9 D-75 — pdca 문서는 목록에서 제외한다(S4). 삭제 접근 경로는 뷰어로 이관(S10).
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDeleteDocument, useDocuments } from '../hooks/useDocuments'
 import { ImportDialog } from './ImportDialog'
-import { STAGE_COLOR } from '../lib/stageColor'
+import { isGeneralDoc } from '../lib/docKind'
 
 export function DocumentList({
   projectId,
@@ -17,6 +18,7 @@ export function DocumentList({
   const { data: documents, isLoading } = useDocuments(projectId)
   const deleteMut = useDeleteDocument(projectId)
   const [importing, setImporting] = useState(false)
+  const generalDocs = (documents ?? []).filter(isGeneralDoc)
 
   async function handleDelete(id: string, title: string) {
     if (!confirm(`"${title}" 문서를 삭제할까요?`)) return
@@ -26,7 +28,7 @@ export function DocumentList({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-(--ctp-text)">문서 ({documents?.length ?? 0})</h2>
+        <h2 className="text-sm font-medium text-(--ctp-text)">문서 ({generalDocs.length})</h2>
         {!importing && (
           <button
             onClick={() => setImporting(true)}
@@ -52,21 +54,13 @@ export function DocumentList({
         <p className="text-sm text-(--ctp-subtext1)">불러오는 중...</p>
       ) : (
         <ul className="flex flex-col gap-1">
-          {documents?.map((d) => (
+          {generalDocs.map((d) => (
             <li
               key={d.id}
               className="flex items-center justify-between rounded border border-(--ctp-surface0) bg-(--ctp-mantle) px-3 py-2"
             >
               <Link to={`/w/${wsSlug}/p/${projSlug}/${d.path}`} className="min-w-0">
                 <span className="text-(--ctp-text) hover:text-(--ctp-mauve)">{d.title}</span>
-                {d.kind === 'pdca' && d.pdcaStage && (
-                  <span
-                    className="ml-2 rounded bg-(--ctp-surface0) px-1.5 py-0.5 text-xs"
-                    style={{ color: STAGE_COLOR[d.pdcaStage] }}
-                  >
-                    {d.pdcaStage}
-                  </span>
-                )}
                 <div className="font-mono text-xs text-(--ctp-overlay0)">{d.path}</div>
               </Link>
               <button
@@ -77,7 +71,7 @@ export function DocumentList({
               </button>
             </li>
           ))}
-          {documents?.length === 0 && (
+          {generalDocs.length === 0 && (
             <p className="text-sm text-(--ctp-overlay0)">아직 문서가 없습니다.</p>
           )}
         </ul>

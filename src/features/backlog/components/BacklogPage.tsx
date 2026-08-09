@@ -62,7 +62,7 @@ function BacklogBoard({
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
+    <div className="mx-auto max-w-4xl p-8">
       <nav className="mb-1 text-sm text-(--ctp-overlay0)">
         <Link to={`/w/${wsSlug}`} className="underline">
           {wsSlug}

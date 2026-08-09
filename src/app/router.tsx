@@ -7,6 +7,7 @@ import { ProjectOverviewPage } from '@/features/document/components/ProjectOverv
 import { DocumentViewPage } from '@/features/document/components/DocumentViewPage'
 import { BacklogPage } from '@/features/backlog/components/BacklogPage'
 import { TokensPage } from '@/features/tokens/components/TokensPage'
+import { ReleasePage } from '@/features/cycle/components/ReleasePage'
 
 export const router = createBrowserRouter([
   {
@@ -48,6 +49,15 @@ export const router = createBrowserRouter([
     element: (
       <AppShell>
         <BacklogPage />
+      </AppShell>
+    ),
+  },
+  {
+    // Design Ref: §9 D-76 — 릴리즈 상세. 문서 와일드카드보다 먼저 매칭돼야 한다(RK-47).
+    path: '/w/:wsSlug/p/:projSlug/r/:version',
+    element: (
+      <AppShell>
+        <ReleasePage />
       </AppShell>
     ),
   },

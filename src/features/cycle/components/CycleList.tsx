@@ -1,9 +1,10 @@
 // 버전(release) 목록 — 버전 카드 + 정렬(버전최신/버전오래된/이름) + 버전 생성/수정.
 // 사이클 연결된 버전의 stage 버튼(문서 없음) 클릭 시 ImportDialog를 프리필해 생성모드로 연다.
+// 삭제는 릴리즈 상세 페이지로 이관됐다(Design §9 D-78, S6).
 import { useState } from 'react'
 import { useDocuments } from '@/features/document/hooks/useDocuments'
 import { ImportDialog } from '@/features/document/components/ImportDialog'
-import { useCreateCycle, useCycles, useDeleteCycle, useUpdateCycle } from '../hooks/useCycles'
+import { useCreateCycle, useCycles, useUpdateCycle } from '../hooks/useCycles'
 import { sortCycles, type CycleSortMode } from '../lib/versionSort'
 import type { PdcaStage } from '../lib/cyclePath'
 import { CycleCard } from './CycleCard'
@@ -29,7 +30,6 @@ export function CycleList({
   const { data: documents } = useDocuments(projectId)
   const createMut = useCreateCycle(projectId)
   const updateMut = useUpdateCycle(projectId)
-  const deleteMut = useDeleteCycle(projectId)
 
   const [sortMode, setSortMode] = useState<CycleSortMode>('version-desc')
   const [creating, setCreating] = useState(false)
@@ -64,11 +64,6 @@ export function CycleList({
       return
     }
     setEditingId(null)
-  }
-
-  async function handleDelete(id: string, version: string) {
-    if (!confirm(`${version} 버전을 삭제할까요? (연결된 문서 자체는 그대로 남습니다)`)) return
-    await deleteMut.mutateAsync(id)
   }
 
   return (
@@ -157,7 +152,6 @@ export function CycleList({
                   setEditingId(cycle.id)
                   setFormError(null)
                 }}
-                onDelete={() => handleDelete(cycle.id, cycle.version)}
               />
             ),
           )}

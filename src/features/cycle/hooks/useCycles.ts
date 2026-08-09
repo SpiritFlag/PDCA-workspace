@@ -9,6 +9,9 @@ export function useCycles(projectId: string) {
     queryKey: KEY(projectId),
     queryFn: () => fetchCycles(projectId),
     staleTime: 60_000,
+    // Check G-2 — ReleasePage·ProjectOverviewPage가 project 미해석 구간에 projectId=''로
+    // 부르는 경로가 생겨(9차), useDocuments.ts와 동일하게 빈 값 요청을 막는다.
+    enabled: !!projectId,
   })
 }
 

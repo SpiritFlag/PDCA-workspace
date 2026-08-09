@@ -26,7 +26,7 @@ export function WorkspaceList() {
   if (isLoading) return <p className="p-8 text-(--ctp-subtext1)">불러오는 중...</p>
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
+    <div className="mx-auto max-w-4xl p-8">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-medium text-(--ctp-text)">워크스페이스</h1>
         {!creating && (

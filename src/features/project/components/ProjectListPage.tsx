@@ -25,7 +25,7 @@ export function ProjectListPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
+    <div className="mx-auto max-w-4xl p-8">
       <Link to="/" className="text-sm text-(--ctp-overlay0) underline">
         ← 워크스페이스 목록
       </Link>

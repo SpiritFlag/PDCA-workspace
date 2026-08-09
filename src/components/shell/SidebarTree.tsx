@@ -7,6 +7,10 @@ import { useProjects } from '@/features/project/hooks/useProjects'
 import { useDocuments } from '@/features/document/hooks/useDocuments'
 import { useCycles } from '@/features/cycle/hooks/useCycles'
 import { sortCycles } from '@/features/cycle/lib/versionSort'
+import { PDCA_STAGES, cycleStagePath } from '@/features/cycle/lib/cyclePath'
+import { releaseUrl } from '@/features/cycle/lib/releaseUrl'
+import { STAGE_COLOR } from '@/features/document/lib/stageColor'
+import { isGeneralDoc } from '@/features/document/lib/docKind'
 import { buildDocTree, type TreeNode } from './buildDocTree'
 
 type NavCtx = { wsSlug?: string; projSlug?: string; docPath: string; pathname: string }
@@ -138,8 +142,10 @@ function VersionsSection({
 }) {
   const [open, setOpen] = useState(overviewActive)
   const { data: cycles } = useCycles(project.id)
+  // Design Ref: §2.2 — useDocuments 쿼리키를 DocumentsSection과 공유해 캐시 히트(RK-50).
+  const { data: documents } = useDocuments(project.id)
   const sorted = sortCycles(cycles ?? [], 'version-desc')
-  const base = `/w/${ws.slug}/p/${project.slug}`
+  const existingPaths = new Set((documents ?? []).map((d) => d.path))
 
   return (
     <div>
@@ -153,23 +159,83 @@ function VersionsSection({
       {open && (
         <div className="flex flex-col gap-0.5">
           {sorted.map((c) => (
-            <Link
-              key={c.id}
-              to={base}
-              style={{ paddingLeft: '1.4rem' }}
-              className="flex items-center gap-1.5 truncate rounded py-1 text-(--ctp-text) hover:bg-(--ctp-surface0)"
-            >
-              <span className="shrink-0 font-mono text-xs text-(--ctp-mauve)">{c.version}</span>
-              {c.name && (
-                <span className="truncate font-mono text-xs text-(--ctp-overlay0)">{c.name}</span>
-              )}
-            </Link>
+            <VersionRow key={c.id} ws={ws} project={project} cycle={c} existingPaths={existingPaths} />
           ))}
           {cycles?.length === 0 && (
             <p className="px-3 py-1 text-xs text-(--ctp-overlay0)" style={{ paddingLeft: '1.4rem' }}>
               버전 없음
             </p>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Design Ref: §5.2, §9 D-80 — 버전 행. hasCycle이면 토글로 4문서를 펼친다(기본 접힘).
+// TreeItem(폴더 재귀) 미사용 — 4개 고정이라 전용 평면 렌더가 단순하다(Plan §3.1 M-3).
+function VersionRow({
+  ws,
+  project,
+  cycle,
+  existingPaths,
+}: {
+  ws: { slug: string }
+  project: { slug: string }
+  cycle: { version: string; name?: string | null; yearMonth?: string | null }
+  existingPaths: Set<string>
+}) {
+  const [docsOpen, setDocsOpen] = useState(false)
+  // Design Ref: §1.2 — 로컬 const 구조분해로 클로저(.map 콜백) 너머까지 내로잉을 유지한다.
+  const { name, yearMonth } = cycle
+  const hasCycle = !!name && !!yearMonth
+
+  return (
+    <div>
+      <div className="flex items-center" style={{ paddingLeft: '1.4rem' }}>
+        {hasCycle && (
+          <button
+            onClick={() => setDocsOpen((o) => !o)}
+            className="shrink-0 px-1 text-xs text-(--ctp-overlay0)"
+            aria-label="펼치기"
+          >
+            {docsOpen ? '▾' : '▸'}
+          </button>
+        )}
+        <Link
+          to={releaseUrl(ws.slug, project.slug, cycle.version)}
+          className="flex min-w-0 flex-1 items-center gap-1.5 truncate rounded py-1 text-(--ctp-text) hover:bg-(--ctp-surface0)"
+        >
+          <span className="shrink-0 font-mono text-xs text-(--ctp-mauve)">{cycle.version}</span>
+          {name && (
+            <span className="truncate font-mono text-xs text-(--ctp-overlay0)">{name}</span>
+          )}
+        </Link>
+      </div>
+      {hasCycle && docsOpen && name && yearMonth && (
+        <div className="flex flex-col gap-0.5">
+          {PDCA_STAGES.map((stage) => {
+            const path = cycleStagePath(yearMonth, name, stage)
+            const exists = existingPaths.has(path)
+            return exists ? (
+              <Link
+                key={stage}
+                to={`/w/${ws.slug}/p/${project.slug}/${path}`}
+                style={{ paddingLeft: '2.6rem' }}
+                className="truncate rounded py-1 text-sm hover:bg-(--ctp-surface0)"
+              >
+                <span style={{ color: STAGE_COLOR[stage] }}>{stage}</span>
+              </Link>
+            ) : (
+              <span
+                key={stage}
+                style={{ paddingLeft: '2.6rem' }}
+                className="truncate py-1 text-sm text-(--ctp-overlay0)"
+              >
+                {stage}
+              </span>
+            )
+          })}
         </div>
       )}
     </div>
@@ -188,7 +254,10 @@ function DocumentsSection({
   const viewingDoc = ctx.projSlug === project.slug && ctx.docPath !== ''
   const [open, setOpen] = useState(viewingDoc)
   const { data: documents } = useDocuments(project.id)
-  const tree = buildDocTree(documents ?? [])
+  // Design Ref: §5.2, §9 D-75 — pdca 문서 제외(S3). 표시 컴포넌트에만 적용, existingPaths
+  // 파생에는 절대 적용하지 않는다(RK-48, VersionsSection/VersionRow는 원본을 그대로 쓴다).
+  const generalDocs = (documents ?? []).filter(isGeneralDoc)
+  const tree = buildDocTree(generalDocs)
 
   return (
     <div>
@@ -197,7 +266,7 @@ function DocumentsSection({
         className="flex w-full items-center gap-1 rounded px-2 py-1 text-left text-(--ctp-text) hover:bg-(--ctp-surface0)"
       >
         <span className="text-xs text-(--ctp-overlay0)">{open ? '▾' : '▸'}</span>
-        <span>문서 ({documents?.length ?? 0})</span>
+        <span>문서 ({generalDocs.length})</span>
       </button>
       {open && (
         <div>
@@ -211,7 +280,7 @@ function DocumentsSection({
               currentDocPath={ctx.projSlug === project.slug ? ctx.docPath : ''}
             />
           ))}
-          {documents?.length === 0 && (
+          {generalDocs.length === 0 && (
             <p className="px-3 py-1 text-xs text-(--ctp-overlay0)">문서 없음</p>
           )}
         </div>

@@ -1,10 +1,11 @@
 // Design Ref: §7.5 라우팅 — /w/:wsSlug/p/:projSlug/* 와일드카드가 문서 경로 그대로.
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useWorkspaces } from '@/features/workspace/hooks/useWorkspaces'
 import { useProjects } from '@/features/project/hooks/useProjects'
 import { useDocumentByPath, useTree } from '../hooks/useDocumentByPath'
 import { useResolvedLinks } from '../hooks/useResolvedLinks'
+import { useDeleteDocument } from '../hooks/useDocuments'
 import { MarkdownView } from './MarkdownView'
 import { FolderView } from './FolderView'
 import { ImportDialog } from './ImportDialog'
@@ -87,6 +88,23 @@ function DocumentContainer({
   const { data: doc, isLoading } = useDocumentByPath(projectId, docPath)
   const { existingPaths } = useResolvedLinks(projectId, docPath, doc?.content ?? '')
   const [editing, setEditing] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const deleteMut = useDeleteDocument(projectId)
+  const navigate = useNavigate()
+
+  // Design Ref: §9 D-85 — 신규 삭제 코드는 try/catch 필수(CRN M-8 미복제).
+  // Design Ref: §9 D-84 — confirm 문구는 DocumentList.tsx의 handleDelete와 동일하게 유지한다
+  // (상수 추출은 소비처 2곳뿐이라 과설계로 보류 — Plan §3.1 M-10).
+  async function handleDelete() {
+    if (!doc || !confirm(`"${doc.title}" 문서를 삭제할까요?`)) return
+    setDeleteError(null)
+    try {
+      await deleteMut.mutateAsync(doc.id)
+      navigate(`/w/${wsSlug}/p/${projSlug}`)
+    } catch {
+      setDeleteError('문서 삭제에 실패했습니다')
+    }
+  }
 
   if (isLoading) return <p className="p-8 text-(--ctp-subtext1)">불러오는 중...</p>
 
@@ -104,7 +122,7 @@ function DocumentContainer({
 
   if (editing) {
     return (
-      <div className="mx-auto max-w-3xl p-8">
+      <div className="mx-auto max-w-5xl p-8">
         <ImportDialog
           projectId={projectId}
           wsSlug={wsSlug}
@@ -117,7 +135,7 @@ function DocumentContainer({
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
+    <div className="mx-auto max-w-5xl p-8">
       <nav className="mb-4 text-sm text-(--ctp-overlay0)">
         <Link to={`/w/${wsSlug}`} className="underline">
           {wsSlug}
@@ -152,6 +170,20 @@ function DocumentContainer({
         projSlug={projSlug}
         existingPaths={existingPaths}
       />
+
+      {/* Design Ref: §9 D-82 — 위험 동작은 편집 버튼과 물리 분리된 하단 구역에(RK-54) */}
+      <div className="mt-10 border-t border-(--ctp-surface0) pt-4">
+        {deleteError && <p className="mb-2 text-sm text-(--ctp-red)">{deleteError}</p>}
+        <div className="flex justify-end">
+          <button
+            onClick={handleDelete}
+            disabled={deleteMut.isPending}
+            className="text-sm text-(--ctp-red) underline disabled:opacity-50"
+          >
+            이 문서 삭제
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
