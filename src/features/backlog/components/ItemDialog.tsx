@@ -1,6 +1,6 @@
 // Design Ref: §5.3 상세 팝업 — 카드 클릭(수정) 또는 [+ 항목](생성) 양쪽에서 쓰는 모달.
 import { useEffect, useState } from 'react'
-import { canTransition, isClosed, type BacklogStatus } from '@shared/transition'
+import { canTransition, isClosed, STATUS_MEANING, type BacklogStatus } from '@shared/transition'
 import { MarkdownView } from '@/features/document/components/MarkdownView'
 import { useResolvedLinks } from '@/features/document/hooks/useResolvedLinks'
 import type { BacklogItem } from '../api'
@@ -183,6 +183,7 @@ export function ItemDialog({
                 type="button"
                 key={s}
                 onClick={() => handleStatusClick(s)}
+                title={STATUS_MEANING[s]}
                 className={`rounded px-1.5 py-0.5 ${item.status === s ? 'ring-2 ring-(--ctp-mauve)' : 'opacity-70 hover:opacity-100'}`}
               >
                 <Badge color={STATUS_COLOR[s]} label={STATUS_LABEL[s]} />

@@ -7,6 +7,7 @@ import * as projectsService from '../services/projects.js'
 import * as documentsService from '../services/documents.js'
 import * as backlogService from '../services/backlog.js'
 import { ServiceError } from '../lib/errors.js'
+import { MCP_ALLOWED_TARGETS, STATUS_MEANING } from '../../shared/transition.js'
 import {
   backlogDetailSchema,
   backlogPrioritySchema,
@@ -159,8 +160,9 @@ export function registerTools(server: McpServer, ownerId: string) {
   server.registerTool(
     'backlog_update',
     {
+      // Design Ref: §4.1 FR-61 — description을 STATUS_MEANING에서 조립한다(문자열 복제 금지, D-45)
       description:
-        '항목 갱신. status는 resolved(다른 작업으로 자연 해소됨)·dropped(안 하기로 판단)만 지정 가능 — doing·done은 사용자 전용이라 거부된다(FR-19). 날짜는 YYYY-MM-DD 형식',
+        `항목 갱신. status 지정 기준 — doing: ${STATUS_MEANING.doing} / done: ${STATUS_MEANING.done} / resolved: ${STATUS_MEANING.resolved} / dropped: ${STATUS_MEANING.dropped}. todo로 되돌리기는 사용자 전용이라 거부된다(D-42). 날짜는 YYYY-MM-DD 형식`,
       inputSchema: {
         id: z.uuid(),
         title: backlogTitleSchema.optional(),
@@ -169,8 +171,9 @@ export function registerTools(server: McpServer, ownerId: string) {
         openedOn: dateStringSchema.optional(),
         // Design Ref: §4.2 D-21 — 지우기는 형의 정정 행위. shared는 nullable이지만 MCP는 null 배제
         closedOn: dateStringSchema.optional(),
-        // Design Ref: §4.4 — 1차 방어: 스키마부터 resolved·dropped로 좁힌다. 2차는 canTransition(서비스, actor='mcp').
-        status: z.enum(['resolved', 'dropped']).optional(),
+        // Design Ref: §3.2 D-44 — 1차 방어: MCP_ALLOWED_TARGETS에서 zod enum을 파생한다(리터럴 복제 금지).
+        // 2차 방어는 canTransition(서비스, actor='mcp') — 심층 방어 2층의 정의는 이제 1곳뿐이다
+        status: z.enum(MCP_ALLOWED_TARGETS).optional(),
       },
     },
     async ({ id, ...patch }) => {

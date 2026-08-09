@@ -1,4 +1,6 @@
-// Design Ref: §5.2 배지 규약 — enum(영문) ↔ 화면 라벨(한글)·색상 매핑 단일 원천 (§10)
+// Design Ref: §5.2 배지 규약 — enum(영문) ↔ 화면 표시명(한글)·색상 매핑 **전용**. "언제 이 상태를
+// 찍는가"(의미)의 단일 원천은 @shared/transition의 STATUS_MEANING이다(6차 D-45, FR-63) — 이
+// 파일은 표시명·색상만 다룬다
 import type { BacklogStatus } from '@shared/transition'
 import type { BacklogPriority } from '@shared/schema'
 

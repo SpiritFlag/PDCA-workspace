@@ -34,10 +34,12 @@ export async function updateBacklogItem(
   const existing = await db.getBacklogItem(ownerId, id)
   if (!existing) throw new ServiceError('NOT_FOUND', '')
 
+  // Design Ref: §6.1 CK3-2 — 6차 개정 후 canTransition이 false가 되는 경우는
+  // actor='mcp' ∧ to='todo' ∧ from≠'todo' 단 하나라 문안이 todo 고정이어도 정확하다
   if (input.status !== undefined && !canTransition(existing.status, input.status, actor)) {
     throw new ServiceError(
       'TRANSITION_DENIED',
-      `status를 ${input.status}(으)로 바꿀 수 없습니다. 진행·완료 전환은 사용자가 UI에서 직접 합니다.`,
+      'status를 todo로 되돌릴 수 없습니다 — 재개·재작업 결정은 사용자가 UI에서 직접 합니다.',
       { from: existing.status, to: input.status, actor },
     )
   }
