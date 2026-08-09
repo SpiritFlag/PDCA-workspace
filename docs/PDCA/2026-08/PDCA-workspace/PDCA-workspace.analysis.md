@@ -7,7 +7,7 @@ version: 1.3
 
 > **분석 유형**: Gap Analysis (Design vs Implementation) + Runtime Verification
 > **프로젝트**: PDCA-workspace
-> **작성자**: cogmo
+> **작성자**: Claude
 > **작성일**: 2026-08-07
 > **Plan 문서**: [PDCA-workspace.plan.md](./PDCA-workspace.plan.md)
 > **Design 문서**: [PDCA-workspace.design.md](./PDCA-workspace.design.md)
@@ -322,5 +322,5 @@ Minor: §7.3 참조.
 
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
-| 0.1 | 2026-08-07 | 최초 분석. gap-detector 정적 3축 + Runtime 실측 종합. Overall 84% | cogmo |
-| 0.2 | 2026-08-07 | Checkpoint 5: 형이 "Critical만 수정" 선택. 서버 재정규화 2건 수정·배포·실증 완료 | cogmo |
+| 0.1 | 2026-08-07 | 최초 분석. gap-detector 정적 3축 + Runtime 실측 종합. Overall 84% | Claude |
+| 0.2 | 2026-08-07 | Checkpoint 5: 형이 "Critical만 수정" 선택. 서버 재정규화 2건 수정·배포·실증 완료 | Claude |

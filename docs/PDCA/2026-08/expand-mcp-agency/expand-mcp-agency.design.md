@@ -11,7 +11,7 @@ version: 1.2
 > 신설하고, 5차 하네스 골격을 `l1-harness.ts`로 추출해 MCP 경로 검증까지 같은 골격 위에서 돌린다.
 >
 > **프로젝트**: PDCA-workspace
-> **작성자**: cogmo
+> **작성자**: Claude
 > **작성일**: 2026-08-09
 > **상태**: Approved 대기 아님 — Plan 승인(§1.5.1) + Checkpoint 3 확정(§1.4) 반영 완료
 > **Plan 문서**: [expand-mcp-agency.plan.md](./expand-mcp-agency.plan.md) (v0.2 Approved)
@@ -25,7 +25,7 @@ version: 1.2
 | Key | Value |
 |-----|-------|
 | **WHY** | 2차 Q10b 경계가 실사용 비용(5차 완주 시 형의 수동 전환 7건)을 발생시켰고, 형이 2026-08-08에 권한 확대를 결정했다. 동시에 "완료/해소"의 의미가 코드에 없어 권한만 열면 오작동한다 — **경계 이동과 의미 정의는 분리 불가**다. cycles 툴 0개(5차 F36)는 3차부터 3회 이월된 기능 공백이다. |
-| **WHO** | 형(cogmo) — 승인자이자 **프로덕션 배포·웹 커넥터 실호출의 실행 주체**(4T-1) / 클로드(Claude Code CLI) — 코드·dev DB 하네스 / **claude.ai 웹 MCP 커넥터 — 이번 사이클의 1급 소비자** |
+| **WHO** | 형 — 승인자이자 **프로덕션 배포·웹 커넥터 실호출의 실행 주체**(4T-1) / 클로드(Claude Code CLI) — 코드·dev DB 하네스 / **claude.ai 웹 MCP 커넥터 — 이번 사이클의 1급 소비자** |
 | **RISK** | 권한만 열고 의미를 안 박으면 클로드가 `done`을 남발한다(RK-28) / 골격 추출이 5차 하네스 15/15를 깬다(RK-30) / MCP L1 경로 3번째 재건축(RK-32) / 2차 문서 사후 개정 9곳 누락(RK-34) |
 | **SUCCESS** | C21~C25 — **Match Rate**(D-40) + C21·C22·C23·C25는 "클로드가 웹 커넥터로 실제로 해냈다"까지(형+클로드 실증) |
 | **SCOPE** | 5건 고정(S1 권한 확대 / S2 의미 명문화 / S3 cycles 읽기 툴 / S4 하네스 재사용 / S5 reorder 실행 확인). 쓰기 툴 0건(D-46·A2), `todo` 복귀는 형 전용(D-42·A1), hard delete 미노출 불변(D-43) |
@@ -525,4 +525,4 @@ Drizzle import 금지, 에러는 `ServiceError` 경유(4차 규칙 6). `cycle_li
 
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
-| 0.1 | 2026-08-09 | 최초 작성. Plan §6.2 검증 6건 전건 실측(§1.3 V1~V6) — **V1**(MCP `app.request()` 경로: initialize 선행 불요·Accept 헤더 불요·인증 401 정상 → `rpc()` 헬퍼 형태 확정), **V2**(`as const satisfies` 튜플 → `z.enum` 파생 성립, `includes` 캐스팅 1회), **V3**(`l1-harness.ts` 파일명이 양쪽 vitest config에 미수집 → D-51), **V4**(골격 6함수 전건 추출 가능, `cycles.l1.ts` diff는 import 교체로 끝남), **V5**(dev DB releaseNote 최대 4자 → D-52: `cycle_list`는 `hasReleaseNote` 치환·`cycle_read`만 본문), **V6**(웹 커넥터 시나리오 5건 §8.6). **Checkpoint 3 형 확정 2건**(§1.4): CK3-1 `STATUS_MEANING` 문안 — 초안 승인 + `resolved`에 "또는 필요가 없어짐" 추가(dropped와의 경계 = 능동적 판단 여부), CK3-2 거부 메시지 A안("status를 todo로 되돌릴 수 없습니다 — 재개·재작업 결정은 사용자가 UI에서 직접 합니다"). 신규 결정 D-51(하네스 파일명)·D-52(cycle_list 응답 성형은 어댑터 책임). 2차 문서 사후 개정 9곳을 §10.2 체크리스트로 고정 | cogmo |
+| 0.1 | 2026-08-09 | 최초 작성. Plan §6.2 검증 6건 전건 실측(§1.3 V1~V6) — **V1**(MCP `app.request()` 경로: initialize 선행 불요·Accept 헤더 불요·인증 401 정상 → `rpc()` 헬퍼 형태 확정), **V2**(`as const satisfies` 튜플 → `z.enum` 파생 성립, `includes` 캐스팅 1회), **V3**(`l1-harness.ts` 파일명이 양쪽 vitest config에 미수집 → D-51), **V4**(골격 6함수 전건 추출 가능, `cycles.l1.ts` diff는 import 교체로 끝남), **V5**(dev DB releaseNote 최대 4자 → D-52: `cycle_list`는 `hasReleaseNote` 치환·`cycle_read`만 본문), **V6**(웹 커넥터 시나리오 5건 §8.6). **Checkpoint 3 형 확정 2건**(§1.4): CK3-1 `STATUS_MEANING` 문안 — 초안 승인 + `resolved`에 "또는 필요가 없어짐" 추가(dropped와의 경계 = 능동적 판단 여부), CK3-2 거부 메시지 A안("status를 todo로 되돌릴 수 없습니다 — 재개·재작업 결정은 사용자가 UI에서 직접 합니다"). 신규 결정 D-51(하네스 파일명)·D-52(cycle_list 응답 성형은 어댑터 책임). 2차 문서 사후 개정 9곳을 §10.2 체크리스트로 고정 | Claude |

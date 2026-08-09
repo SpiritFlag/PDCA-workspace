@@ -10,7 +10,7 @@ version: 1.3
 > 생략하고(RK-16·RK-18), 대신 Design §8이 정의한 시나리오를 전부 실행한 뒤 diff를 직접
 > 재검토했다.
 > **프로젝트**: PDCA-workspace
-> **작성자**: cogmo
+> **작성자**: Claude
 > **작성일**: 2026-08-08
 > **Plan 문서**: [refine-mcp-hardening.plan.md](./refine-mcp-hardening.plan.md)
 > **Design 문서**: [refine-mcp-hardening.design.md](./refine-mcp-hardening.design.md)
@@ -24,7 +24,7 @@ version: 1.3
 | Key | Value |
 |-----|-------|
 | **WHY** | 2차 사이클이 실사용 검증을 조건으로 열어둔 이월 6건이 지금 실사용에서 실제로 걸린다. 문서·코드·표가 각각 한 군데씩 어긋난 상태를 다음 사이클로 또 넘기면 원칙이 관행으로 무너진다. |
-| **WHO** | 형(cogmo) — 브라우저 실사용자이자 승인자 / **클로드 2종**: Claude Code CLI(코드 작업)와 claude.ai 웹 MCP 커넥터(백로그·문서 운용). C7·C10·C14 실사용 확인 전부 웹 커넥터로 달성. |
+| **WHO** | 형 — 브라우저 실사용자이자 승인자 / **클로드 2종**: Claude Code CLI(코드 작업)와 claude.ai 웹 MCP 커넥터(백로그·문서 운용). C7·C10·C14 실사용 확인 전부 웹 커넥터로 달성. |
 | **RISK** | zod null 허용의 타입 파급 3소비처(RK-10) / MCP 스키마 조임이 실사용 호출을 거부(RK-14) / 종료 사이클 문서 사후 개정의 기록 오염(RK-15) / design 전면 재동기화로 스코프 번짐(RK-16). |
 | **SUCCESS** | C11~C16 — 스코프 6건과 1:1. |
 | **SCOPE** | 이월 6건 고정(S1~S6). |
@@ -241,4 +241,4 @@ L1 실응답 관측: VALIDATION_ERROR(r9) UNAUTHORIZED(L1#1·3b) FORBIDDEN(r4) C
 
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
-| 0.1 | 2026-08-08 | 최초 분석. RK-18에 따라 gap-detector 전면 스캔 대신 스코프 6건(S1~S6) 대조로 한정. diff 재검토(`9b5c37e..00686f0`) + Do 단계 실증 결과(L0 49/49, L1 하네스 36/36, 브라우저 ✕ 버튼 확인, 프로덕션 로그 실측, 웹 커넥터 실사용 4건) 재대입. C11~C16 6/6 완전 충족, D-19~D-28·§9.1 규칙 6 전부 준수 확인. Critical/Important 이월 0건 — Report 진행 제안 | cogmo |
+| 0.1 | 2026-08-08 | 최초 분석. RK-18에 따라 gap-detector 전면 스캔 대신 스코프 6건(S1~S6) 대조로 한정. diff 재검토(`9b5c37e..00686f0`) + Do 단계 실증 결과(L0 49/49, L1 하네스 36/36, 브라우저 ✕ 버튼 확인, 프로덕션 로그 실측, 웹 커넥터 실사용 4건) 재대입. C11~C16 6/6 완전 충족, D-19~D-28·§9.1 규칙 6 전부 준수 확인. Critical/Important 이월 0건 — Report 진행 제안 | Claude |

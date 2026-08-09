@@ -7,7 +7,7 @@ version: 1.3
 
 > **분석 유형**: Gap Analysis (Design vs Implementation) + Runtime Verification
 > **프로젝트**: PDCA-workspace
-> **작성자**: cogmo
+> **작성자**: Claude
 > **작성일**: 2026-08-07
 > **Plan 문서**: [backlog-with-mcp.plan.md](./backlog-with-mcp.plan.md)
 > **Design 문서**: [backlog-with-mcp.design.md](./backlog-with-mcp.design.md)
@@ -21,7 +21,7 @@ version: 1.3
 | Key | Value |
 |-----|-------|
 | **WHY** | PDCA 산출물은 쌓이는데 "다음 할 일"이 사람 머리와 report.md 표에만 있다. 그 판단에 필요한 문서를 클로드가 못 읽는다. |
-| **WHO** | 형(cogmo) 단독 + **클로드(MCP 클라이언트)** — 처음으로 사람이 아닌 소비자가 생긴다. |
+| **WHO** | 형 단독 + **클로드(MCP 클라이언트)** — 처음으로 사람이 아닌 소비자가 생긴다. |
 | **RISK** | Streamable HTTP MCP를 Vercel에 얹기(F1·F2로 확률 하향) / PAT 전체 쓰기 권한(RK-02, D-18로 노출면 소폭 확대) / Neon HTTP 드라이버 정렬 원자성(RK-04, module-1에서 해소). |
 | **SUCCESS** | C1~C10. 핵심은 **C7 — 유즈케이스 3단계를 실제 Claude Code 세션에서 완주**. |
 | **SCOPE** | 축1 백로그 DB+API / 축2 백로그 UI / 축3 PAT / 축4 MCP 툴 8개. |
@@ -261,5 +261,5 @@ C7·C10은 애초에 배포·형의 실사용이 있어야 하는 항목이라 �
 
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
-| 0.1 | 2026-08-07 | 최초 분석. gap-detector 정적 3축(93.6%) + 본인 Runtime L1 13/13 재실증 + gap-detector 의심 5건 중 4건 git/실요청으로 재검증(2건 오탐 확정). Overall 96% | cogmo |
-| 0.2 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클)** C7·C10 웹 커넥터 완주(F27, S6) 반영. Checkpoint 5에서 이월했던 Critical(C-1)·Important(I-3)·M-4가 module-1·2에서 해소됨을 §7에 기록 | cogmo |
+| 0.1 | 2026-08-07 | 최초 분석. gap-detector 정적 3축(93.6%) + 본인 Runtime L1 13/13 재실증 + gap-detector 의심 5건 중 4건 git/실요청으로 재검증(2건 오탐 확정). Overall 96% | Claude |
+| 0.2 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클)** C7·C10 웹 커넥터 완주(F27, S6) 반영. Checkpoint 5에서 이월했던 Critical(C-1)·Important(I-3)·M-4가 module-1·2에서 해소됨을 §7에 기록 | Claude |

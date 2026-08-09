@@ -10,7 +10,7 @@ version: 1.3
 > 브라우저 기본 동작만으로 살아있게 한다.
 >
 > **프로젝트**: PDCA-workspace
-> **작성자**: cogmo
+> **작성자**: Claude
 > **작성일**: 2026-08-07
 > **상태**: Draft (v0.1 — Checkpoint 1·2 답변 반영)
 > **PDCA Cycle**: PDCA-workspace (프로젝트 최초 사이클)
@@ -35,7 +35,7 @@ version: 1.3
 | Key | Value |
 |-----|-------|
 | **WHY** | PDCA 산출물이 레포 안 파일로만 존재해 조회·관리가 안 된다. 그렇다고 웹으로 옮기면 문서 간 상대링크(특히 docs 밖 소스코드 링크 17종)가 전부 죽는다. |
-| **WHO** | 형(cogmo) 단독. 공유·협업·다중 유저 없음. 인증은 "나 말고 아무도 못 보게" 수준. |
+| **WHO** | 형 단독. 공유·협업·다중 유저 없음. 인증은 "나 말고 아무도 못 보게" 수준. |
 | **RISK** | Vercel이 `.md`로 끝나는 URL을 정적 파일로 오인해 SPA 라우팅이 안 먹는 것(RK-01, 링크 요구사항 전체를 무너뜨림) / `path` 오입력이 조용히 링크를 죽이는 것(RK-02) / Neon Auth를 Vite SPA에 붙이는 경로가 Next.js 대비 덜 다져진 것(RK-03). |
 | **SUCCESS** | C1~C10. 핵심은 **C6 — cogmo-report docs 67개를 실제로 넣고, 문서 내 마크다운 링크가 종류별(형제/타폴더/디렉터리/레포외부) 전부 의도대로 동작**(앞 3종 이동, 마지막 1종 비활성). |
 | **SCOPE** | 축1 3계층 CRUD(Workspace/Project/Document) / 축2 경로 미러 뷰어 + 링크 판정 / 축3 에디터·테마·셸 / 축4 배포 파이프라인(Vercel main 직배 + Neon 브랜치 2개). 다중 유저·권한·전문검색·Git 동기화·실시간 협업은 스코프 외. |
@@ -574,5 +574,5 @@ Neon Postgres  (dev 브랜치 / main 브랜치)
 
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
-| 0.1 | 2026-08-07 | 최초 작성. Checkpoint 1·2 답변(Q1 붙여넣기 임포트 / Q2 URL 경로 미러링 / Q3 Tailwind+Catppuccin / Q4 Neon 브랜치 분리) 반영. cogmo-report docs 실측(F1~F8) 기반 | cogmo |
-| 0.2 | 2026-08-08 | §1.5의 `prompt.tmp` 깨진 링크 제거 — v0.1.2(`c48d434`)에서 해당 `.tmp` 파일이 삭제되며 유일한 깨진 링크로 남아 있었다(3차 사이클 analysis M-10) | cogmo |
+| 0.1 | 2026-08-07 | 최초 작성. Checkpoint 1·2 답변(Q1 붙여넣기 임포트 / Q2 URL 경로 미러링 / Q3 Tailwind+Catppuccin / Q4 Neon 브랜치 분리) 반영. cogmo-report docs 실측(F1~F8) 기반 | Claude |
+| 0.2 | 2026-08-08 | §1.5의 `prompt.tmp` 깨진 링크 제거 — v0.1.2(`c48d434`)에서 해당 `.tmp` 파일이 삭제되며 유일한 깨진 링크로 남아 있었다(3차 사이클 analysis M-10) | Claude |

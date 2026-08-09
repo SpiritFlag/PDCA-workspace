@@ -7,7 +7,7 @@ version: 1.3
 
 > **분석 유형**: 사후 규약 준수 분석 (Convention & Retrospective Compliance) — *통상의 Design vs Implementation Gap Analysis가 아니다*
 > **프로젝트**: PDCA-workspace
-> **작성자**: cogmo
+> **작성자**: Claude
 > **작성일**: 2026-08-08
 > **Plan 문서**: [cycle-release-note.plan.md](./cycle-release-note.plan.md)
 > **Design 문서**: [cycle-release-note.design.md](./cycle-release-note.design.md)
@@ -22,7 +22,7 @@ version: 1.3
 | Key | Value |
 |-----|-------|
 | **WHY** | 문서·백로그는 1급 데이터가 됐는데 릴리즈(버전)만 데이터가 아니다. |
-| **WHO** | 형(cogmo) — 브라우저 실사용자. 이번엔 클로드가 소비자가 아니다(cycles MCP 툴 0개). |
+| **WHO** | 형 — 브라우저 실사용자. 이번엔 클로드가 소비자가 아니다(cycles MCP 툴 0개). |
 | **RISK** | PDCA 없이 구현부터(RK-01) / 사후 Design은 자기충족(RK-02) / 팔레트 규약 개정(RK-03) / 프로덕션 설정 오염(RK-04). |
 | **SUCCESS** | C1~C8. 핵심은 C3 — 버전 카드 4버튼 왕복. |
 | **SCOPE** | 축1 DB+API / 축2 버전 UI / 축3 임포트 재설계 / 축4 셸·화면 / 축5 테마 / 축6 로컬 개발 서버. |
@@ -351,5 +351,5 @@ M-1 ~ M-10. 개별 규모는 전부 소. M-8(미처리 rejection)·M-9(dead code
 
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
-| 0.1 | 2026-08-08 | 사후 규약 준수 분석 최초 작성. §1.2에서 통상 Gap Analysis가 불가능한 이유를 논증하고 기준선을 3원천으로 재정의. 종합 50%(A 100 / B 71 / C 40 / D 0 / E 0 / F 100). Critical 1(C-1 사이클 연결 해제 불가 — 2차 `closedOn` 재발)·Important 5·Minor 10·관찰 5 검출. §5에 절차 생략의 대가를 6항목으로 정리 | cogmo |
-| 0.2 | 2026-08-08 | 링크 전수 검증(56건) 결과 반영 — `c48d434`의 `prompt.tmp` 삭제로 1차 plan §1.5 링크가 깨진 것을 M-10으로 추가. Minor 9 → 10 | cogmo |
+| 0.1 | 2026-08-08 | 사후 규약 준수 분석 최초 작성. §1.2에서 통상 Gap Analysis가 불가능한 이유를 논증하고 기준선을 3원천으로 재정의. 종합 50%(A 100 / B 71 / C 40 / D 0 / E 0 / F 100). Critical 1(C-1 사이클 연결 해제 불가 — 2차 `closedOn` 재발)·Important 5·Minor 10·관찰 5 검출. §5에 절차 생략의 대가를 6항목으로 정리 | Claude |
+| 0.2 | 2026-08-08 | 링크 전수 검증(56건) 결과 반영 — `c48d434`의 `prompt.tmp` 삭제로 1차 plan §1.5 링크가 깨진 것을 M-10으로 추가. Minor 9 → 10 | Claude |

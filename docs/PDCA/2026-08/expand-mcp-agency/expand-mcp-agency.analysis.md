@@ -7,7 +7,7 @@ version: 1.3
 
 > **분석 유형**: Gap Analysis (Design vs Implementation) + Runtime Verification + 웹 커넥터 실사용
 > **프로젝트**: PDCA-workspace
-> **작성자**: cogmo
+> **작성자**: Claude
 > **작성일**: 2026-08-09
 > **Plan 문서**: [expand-mcp-agency.plan.md](./expand-mcp-agency.plan.md) (v0.2 Approved)
 > **Design 문서**: [expand-mcp-agency.design.md](./expand-mcp-agency.design.md) (v0.1)
@@ -21,7 +21,7 @@ version: 1.3
 | Key | Value |
 |-----|-------|
 | **WHY** | 2차 Q10b 경계가 실사용 비용(5차 완주 시 형의 수동 전환 7건)을 발생시켰고, 형이 2026-08-08에 권한 확대를 결정했다. 경계 이동과 의미 정의는 분리 불가. cycles 툴 0개(5차 F36)는 3차부터 3회 이월된 기능 공백이다. |
-| **WHO** | 형(cogmo) — 승인자·프로덕션 배포·웹 커넥터 실호출의 실행 주체 / 클로드(Claude Code CLI) — 코드·dev DB 하네스 / **claude.ai 웹 MCP 커넥터 — 이번 사이클의 1급 소비자** |
+| **WHO** | 형 — 승인자·프로덕션 배포·웹 커넥터 실호출의 실행 주체 / 클로드(Claude Code CLI) — 코드·dev DB 하네스 / **claude.ai 웹 MCP 커넥터 — 이번 사이클의 1급 소비자** |
 | **RISK** | 권한만 열고 의미를 안 박으면 클로드가 `done`을 남발(RK-28) / 골격 추출이 5차 하네스 15/15를 깬다(RK-30) / MCP L1 경로 3번째 재건축(RK-32) / 2차 문서 사후 개정 9곳 누락(RK-34) |
 | **SUCCESS** | C21~C25 — Match Rate(D-40) + "클로드가 웹 커넥터로 실제로 해냈다"까지(형+클로드 실증) |
 | **SCOPE** | 5건(S1 권한 확대 / S2 의미 명문화 / S3 cycles 읽기 툴 / S4 하네스 재사용 / S5 reorder 실행 확인). 쓰기 툴 0건(D-46), `todo` 복귀는 형 전용(D-42), hard delete 미노출 불변(D-43) |
@@ -278,4 +278,4 @@ TODO/FIXME/placeholder grep 0건. `shared/transition.test.ts`는 §8.2 T1~T11과
 
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
-| 0.1 | 2026-08-09 | 최초 분석. Design §11.1 구조 대조(11/11) + 코드 내용 줄 단위 대조(Functional 95%·Contract 92%) + Runtime 재확인(L0 57/57·L1 28/28) + 형의 웹 커넥터 실사용 5건·브라우저 확인 2건 반영. Overall Match Rate 97%. GAP 4건 발견·전건 처리 기록(GAP-1 m5 문구 불일치는 module-2에서 형 결정으로 이미 해소, GAP-3 vitest 파일 병렬 경합은 module-1에서 코드로 해소). Success Criteria C21~C25 5/5 완전 충족, Critical·Important 이월 0건 — Report 진행 권장 | cogmo |
+| 0.1 | 2026-08-09 | 최초 분석. Design §11.1 구조 대조(11/11) + 코드 내용 줄 단위 대조(Functional 95%·Contract 92%) + Runtime 재확인(L0 57/57·L1 28/28) + 형의 웹 커넥터 실사용 5건·브라우저 확인 2건 반영. Overall Match Rate 97%. GAP 4건 발견·전건 처리 기록(GAP-1 m5 문구 불일치는 module-2에서 형 결정으로 이미 해소, GAP-3 vitest 파일 병렬 경합은 module-1에서 코드로 해소). Success Criteria C21~C25 5/5 완전 충족, Critical·Important 이월 0건 — Report 진행 권장 | Claude |

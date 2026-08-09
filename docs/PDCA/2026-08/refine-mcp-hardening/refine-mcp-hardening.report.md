@@ -8,7 +8,7 @@ version: 1.1
 > **상태**: 완료 (Scope Closure Rate 6/6 = 100%, Checkpoint 5 — 이월 없음)
 >
 > **프로젝트**: PDCA-workspace
-> **작성자**: cogmo
+> **작성자**: Claude
 > **완료일**: 2026-08-08
 > **PDCA Cycle**: refine-mcp-hardening (문서화 기준 4번째 사이클)
 
@@ -281,4 +281,4 @@ version: 1.1
 
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
-| 0.1 | 2026-08-08 | 완료 보고서 최초 작성. Scope Closure Rate 6/6(100%), Success Rate 6/6 — 이월 없음. Match Rate 대신 Scope Closure Rate 채택(마감 사이클 성격, RK-18) | cogmo |
+| 0.1 | 2026-08-08 | 완료 보고서 최초 작성. Scope Closure Rate 6/6(100%), Success Rate 6/6 — 이월 없음. Match Rate 대신 Scope Closure Rate 채택(마감 사이클 성격, RK-18) | Claude |

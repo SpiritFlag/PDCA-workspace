@@ -10,7 +10,7 @@ version: 1.3
 > MCP는 공식 SDK + `@hono/mcp`로 기존 Hono 앱에 라우트 하나로 얹는다(`vercel.json` 무변경).
 >
 > **프로젝트**: PDCA-workspace
-> **작성자**: cogmo
+> **작성자**: Claude
 > **작성일**: 2026-08-07
 > **상태**: Draft (v0.1 — Checkpoint 3에서 옵션 B 선택)
 > **계획 문서**: [backlog-with-mcp.plan.md](./backlog-with-mcp.plan.md)
@@ -24,7 +24,7 @@ version: 1.3
 | Key | Value |
 |-----|-------|
 | **WHY** | PDCA 산출물은 쌓이는데 "다음 할 일"이 사람 머리와 report.md 표에만 있다. 그 판단에 필요한 문서를 클로드가 못 읽는다. |
-| **WHO** | 형(cogmo) 단독 + **클로드(MCP 클라이언트)** — 처음으로 사람이 아닌 소비자가 생긴다. |
+| **WHO** | 형 단독 + **클로드(MCP 클라이언트)** — 처음으로 사람이 아닌 소비자가 생긴다. |
 | **RISK** | Streamable HTTP MCP를 Vercel에 얹기(RK-01, F1·F2로 확률 하향) / PAT 전체 쓰기 권한(RK-02) / Neon HTTP 드라이버 정렬 원자성(RK-04). |
 | **SUCCESS** | C1~C10. 핵심은 **C7 — 유즈케이스 3단계(문서 훑기→백로그 갱신→형이 착수)를 실제 Claude Code 세션에서 완주**. |
 | **SCOPE** | 축1 백로그 DB+API / 축2 백로그 UI / 축3 PAT / 축4 MCP 툴 8개. 다중 유저·기한·라벨·의존관계·MCP OAuth는 스코프 외. |
@@ -642,8 +642,8 @@ class ServiceError extends Error { constructor(public code: ErrorCode, message, 
 
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
-| 0.1 | 2026-08-07 | 최초 작성. Checkpoint 3에서 옵션 B(Clean — 서비스 계층) 선택. Plan §6.2 검증 3건 반영(MCP stateless 사양 적합·`claude mcp add` 헤더 방식·Neon 단일문/배치 원자성). Plan §8.3 미결(TOKEN_HASH_SECRET)을 "불필요"로 확정, 에러 코드 표(§6.1) 확정 및 PATH_TAKEN→CONFLICT 통일 결정 | cogmo |
-| 0.2 | 2026-08-07 | Check 단계 중 D-18 추가: claude.ai 웹 커넥터 대응으로 MCP 인증에 `?token=` 쿼리파라미터 폴백(PAT 한정) 추가. §4.2 갱신 | cogmo |
-| 0.3 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클 module-1)** §6.1에 403 `FORBIDDEN` 행 추가 — Origin 거부가 표를 안 지나는 리터럴 응답이던 균열(I-3)을 코드(`mcp/index.ts`가 `ServiceError('FORBIDDEN', ...)` throw)와 같은 커밋에서 정합화(RK-12) | cogmo |
-| 0.4 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클 module-4, S5)** §6.3에 FR-21 실구현 위치 정정 추가(M-1) — Design은 QueryClient onError를 지정했지만 실제는 `src/lib/api.ts`의 `authedFetch` | cogmo |
-| 0.5 | 2026-08-09 | **(사후 개정, expand-mcp-agency 사이클 6차 D-42·D-44·D-46)** Q10b 권한 경계 개정 반영 6곳 — §3.3 T1~T8 표(T2·T3 반전 병기 + T9·T10 신설 병기) / §2.2 데이터 흐름 ⑤ / §4.4 툴 명세(10개로 확장 병기, `backlog_update` 행 + zod 협소화 문단) / §6.1 `TRANSITION_DENIED` 행 / §8.2 L1 #6 / §8.3 L3 4단계. 전부 원문 유지 + 사후 문구 병기(4차 D-25 형식) | cogmo |
+| 0.1 | 2026-08-07 | 최초 작성. Checkpoint 3에서 옵션 B(Clean — 서비스 계층) 선택. Plan §6.2 검증 3건 반영(MCP stateless 사양 적합·`claude mcp add` 헤더 방식·Neon 단일문/배치 원자성). Plan §8.3 미결(TOKEN_HASH_SECRET)을 "불필요"로 확정, 에러 코드 표(§6.1) 확정 및 PATH_TAKEN→CONFLICT 통일 결정 | Claude |
+| 0.2 | 2026-08-07 | Check 단계 중 D-18 추가: claude.ai 웹 커넥터 대응으로 MCP 인증에 `?token=` 쿼리파라미터 폴백(PAT 한정) 추가. §4.2 갱신 | Claude |
+| 0.3 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클 module-1)** §6.1에 403 `FORBIDDEN` 행 추가 — Origin 거부가 표를 안 지나는 리터럴 응답이던 균열(I-3)을 코드(`mcp/index.ts`가 `ServiceError('FORBIDDEN', ...)` throw)와 같은 커밋에서 정합화(RK-12) | Claude |
+| 0.4 | 2026-08-08 | **(사후 확인, refine-mcp-hardening 사이클 module-4, S5)** §6.3에 FR-21 실구현 위치 정정 추가(M-1) — Design은 QueryClient onError를 지정했지만 실제는 `src/lib/api.ts`의 `authedFetch` | Claude |
+| 0.5 | 2026-08-09 | **(사후 개정, expand-mcp-agency 사이클 6차 D-42·D-44·D-46)** Q10b 권한 경계 개정 반영 6곳 — §3.3 T1~T8 표(T2·T3 반전 병기 + T9·T10 신설 병기) / §2.2 데이터 흐름 ⑤ / §4.4 툴 명세(10개로 확장 병기, `backlog_update` 행 + zod 협소화 문단) / §6.1 `TRANSITION_DENIED` 행 / §8.2 L1 #6 / §8.3 L3 4단계. 전부 원문 유지 + 사후 문구 병기(4차 D-25 형식) | Claude |
