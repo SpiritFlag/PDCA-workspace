@@ -6,13 +6,15 @@
 // (src/lib/api.ts) 구조를 바꿀 수 없다. 그래서 이 파일에서 밖에서 합성한다.
 // api/[...route].ts와 L1 하네스(l1-harness.ts)가 이 root를 함께 쓴다 — 실제 배포와
 // 테스트가 같은 라우팅 트리를 보게 하기 위함.
+//
+// Decision: [Do] `/__clerk` 리버스 프록시(clerk-proxy.ts)는 커스텀 도메인(Clerk 자체
+// Account Portal 활성화) 확보 후 제거했다 — Clerk가 `clerk.<커스텀도메인>`을 DNS로 직결
+// 제공해 우리가 헤더 주입·SSRF 방어까지 직접 구현하던 프록시 자체가 불필요해졌다(실측 2026-08-10,
+// 직결로 DCR 등록 201 확인). `CLERK_SECRET_KEY`도 이제 필요 없다.
 import { Hono } from 'hono'
 import { app } from './app.js'
 import { prmRoute } from './routes/prm.js'
-import { clerkProxyRoute } from './routes/clerk-proxy.js'
 
 export const root = new Hono()
   .route('/', app)
   .route('/.well-known/oauth-protected-resource/api/mcp', prmRoute)
-  // Design Ref: §4.1 확장 — Clerk 프로덕션 Frontend API 프록시. clerk-proxy.ts 참조.
-  .route('/__clerk', clerkProxyRoute)
