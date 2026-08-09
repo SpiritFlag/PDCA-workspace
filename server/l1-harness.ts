@@ -18,7 +18,9 @@
 // 확장: 새 도메인의 L1을 추가하려면 이 파일의 함수들을 가져다 쓰고 파일명을 `*.l1.ts`로 두면 된다.
 import { randomUUID } from 'node:crypto'
 import { like } from 'drizzle-orm'
-import { app } from './app.js'
+// Design Ref: §4.1 — root(app + PRM 합성)를 쓴다. 하네스와 실배포가 같은 라우팅 트리를 보게 해
+// PRM처럼 app의 basePath 밖에 있는 경로도 이 파일의 req()/rpc()로 그대로 검증할 수 있다.
+import { root as app } from './root.js'
 import { getDb } from './db/client.js'
 import { apiTokens, workspaces } from './db/schema.js'
 import { createApiToken } from './db/scoped.js'

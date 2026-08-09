@@ -14,7 +14,6 @@ import { cycleItemRoute, projectCyclesRoute } from './routes/cycles.js'
 import { backlogItemRoute, projectBacklogRoute } from './routes/backlog.js'
 import { tokensRoute } from './routes/tokens.js'
 import { mcpRoute } from './mcp/index.js'
-import { prmRoute } from './routes/prm.js'
 import { ServiceError } from './lib/errors.js'
 
 const app = new Hono<AuthEnv>()
@@ -40,9 +39,6 @@ const app = new Hono<AuthEnv>()
   .route('/tokens', tokensRoute)
   .use('/mcp', mcpAuth)
   .route('/mcp', mcpRoute)
-  // Design Ref: §4.1 — PRM은 인증 불요. vercel.json이 /.well-known/... 요청을 /api/.well-known/...
-  // 로 매핑한다고 가정(module-2에서 curl로 실측 확정, RK-67).
-  .route('/.well-known/oauth-protected-resource/api/mcp', prmRoute)
   .onError((err, c) => {
     // Decision: [Do] 전체 회귀 스윕에서 발견 — HTTPException(예: authMiddleware의 401)을
     // 이 핸들러가 무조건 500으로 덮어쓰고 있었다. 의도된 응답은 그대로 통과시킨다.

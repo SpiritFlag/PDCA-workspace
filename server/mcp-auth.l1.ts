@@ -106,8 +106,9 @@ describe.skipIf(!hasDb)('mcp-auth L1 (실 dev DB)', () => {
   })
 
   it('a7 PRM GET (인증 불요) → resource·authorization_servers 형식', async () => {
+    // module-2 curl 실측(RK-67) 확정 — /api 접두어 없이 원래 요청 경로 그대로(root.ts 참조)
     await withEnv({ CLERK_ISSUER: TEST_CLERK_ISSUER }, async () => {
-      const res = await req(null, '/api/.well-known/oauth-protected-resource/api/mcp')
+      const res = await req(null, '/.well-known/oauth-protected-resource/api/mcp')
       expect(res.status).toBe(200)
       const json = (await res.json()) as { resource: string; authorization_servers: string[] }
       expect(json.resource).toMatch(/\/api\/mcp$/)
