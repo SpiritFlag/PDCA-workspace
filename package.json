@@ -12,7 +12,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:l1": "set -a && . ./.env.local && set +a && vitest run --config vitest.l1.config.ts"
+    "test:l1": "set -a && . ./.env.local && set +a && vitest run --config vitest.l1.config.ts",
+    "docs:upload": "set -a && . ./.env.local && set +a && tsx scripts/docs-upload.ts"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.2",
