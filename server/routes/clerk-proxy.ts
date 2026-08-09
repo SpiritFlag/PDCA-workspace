@@ -32,9 +32,17 @@ export const clerkProxyRoute = new Hono().all('/*', async (c) => {
   headers.set('X-Forwarded-Proto', 'https')
   headers.delete('host')
 
-  return fetch(targetUrl, {
+  const upstream = await fetch(targetUrl, {
     method: c.req.method,
     headers,
     body: ['GET', 'HEAD'].includes(c.req.method) ? undefined : await c.req.raw.blob(),
   })
+
+  // Decision: [Do] fetch()의 Response를 그대로 반환하면 Vercel Node 함수 경계를 넘으며 body
+  // 스트림이 비어버렸다(실측 2026-08-10, 헤더는 정상 도착하는데 바디만 0바이트). 버퍼링해
+  // 새 Response로 재구성 — content-encoding/length는 버퍼 기준으로 재계산되게 제거.
+  const responseHeaders = new Headers(upstream.headers)
+  responseHeaders.delete('content-encoding')
+  responseHeaders.delete('content-length')
+  return new Response(await upstream.arrayBuffer(), { status: upstream.status, headers: responseHeaders })
 })
