@@ -1,9 +1,10 @@
 // Design Ref: §8.1·§8.2 — prompts 표면 L1 하네스. 프롬프트는 DB를 읽지 않아(§3.1 M-1)
 // 픽스처는 토큰 1개뿐(5T-2 N/A 근거와 동형) — mcp.l1.ts의 워크스페이스·프로젝트 시딩 불요.
 //
-// 시나리오 번호 p1~p8은 Design §8.2와 1:1. module-1은 배선(index.ts) 없이 이 파일을 먼저
-// 완성해 red를 기록한다(p1~p6은 -32601, p7·p8은 인증·Origin 계층이 앞이라 이미 통과) —
-// module-2가 index.ts에 registerPrompts를 배선하면 green으로 전환된다.
+// 시나리오 번호 p1~p9는 Design §8.2와 1:1(p9는 D-98 module-3 재개정 때 신설). module-1은
+// 배선(index.ts) 없이 이 파일을 먼저 완성해 red를 기록한다(p1~p6은 -32601, p7·p8은 인증·
+// Origin 계층이 앞이라 이미 통과) — module-2가 index.ts에 registerPrompts를 배선하면
+// green으로 전환된다.
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { BACKLOG_SYNC_TEXT, MAKE_CC_PROMPT_TEXT } from './mcp/prompts.js'
