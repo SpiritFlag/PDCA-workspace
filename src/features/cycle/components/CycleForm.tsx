@@ -30,15 +30,34 @@ export function CycleForm({
     defaultValues: { version: 'v0.1.0', ...defaultValues },
   })
 
-  // 토글에 따라 name/yearMonth를 폼 상태와 동기화 — off면 둘 다 비워 refine(pair rule)을 만족시킨다.
+  // Design Ref: §5.1 — 토글 off는 undefined(키 소실)가 아니라 null을 세팅해야 PATCH 본문에
+  // 해제 의도가 실린다(FR-42). undefined였다면 JSON 직렬화에서 키가 사라져 "변경 없음"으로
+  // 해석된다(C-1의 조용한 실패 경로).
   function toggleLink(on: boolean) {
     setLinkCycle(on)
     if (on) {
       if (!getValues('yearMonth')) setValue('yearMonth', currentYearMonth())
+      if (getValues('name') === null) setValue('name', '')
     } else {
-      setValue('name', undefined)
-      setValue('yearMonth', undefined)
+      setValue('name', null)
+      setValue('yearMonth', null)
     }
+  }
+
+  // Design Ref: §5.1 D-33 — 해제 confirm. 문안은 형 확정(Checkpoint 3): 결과 2개 명시 +
+  // "(문서 자체는 삭제되지 않음)" 괄호 필수 — "해제 = 문서 삭제" 오해가 해제를 못 쓰게 만든다.
+  // 해제는 가역(재연결 가능)이고 이름 점유만 풀린다는 심상을 문안이 전달해야 한다.
+  function submitGuard(input: CreateCycleInput) {
+    const unlinking = !!defaultValues?.name && input.name === null
+    if (unlinking) {
+      const ok = confirm(
+        `PDCA 사이클 연결을 해제할까요?\n\n` +
+          `문서 버튼이 사라지고, 사이클명 '${defaultValues!.name}'를 다른 버전이 쓸 수 있게 됩니다. ` +
+          `(문서 자체는 삭제되지 않음)`,
+      )
+      if (!ok) return Promise.resolve()
+    }
+    return onSubmit(input)
   }
 
   const inputCls =
@@ -46,7 +65,7 @@ export function CycleForm({
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit(submitGuard)}
       className="flex flex-col gap-3 rounded-lg border border-(--ctp-surface0) bg-(--ctp-mantle) p-4"
     >
       <div>

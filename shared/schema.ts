@@ -119,24 +119,35 @@ export const cycleNameSchema = z
   .regex(/^[A-Za-z0-9._-]+$/, '사이클명은 영문·숫자·._- 만 가능합니다')
 
 // zod v4: refine이 붙은 스키마엔 partial()을 못 쓰므로 필드 정의/refine을 분리한다
+// Design Ref: §3.2 — name/yearMonth nullable(D-31a: create/update가 이 필드를 공유하고
+// CycleForm이 createCycleSchema를 resolver로 쓰므로 공유 필드에 넣는다, V2 실측).
+// null 쌍 = 연결 해제(update) 또는 미연결 생성(create, FR-41).
 const cycleFields = z.object({
   version: cycleVersionSchema,
   releaseNote: z.string().max(50000).optional(),
-  name: cycleNameSchema.optional(),
-  yearMonth: yearMonthSchema.optional(),
+  name: cycleNameSchema.nullable().optional(),
+  yearMonth: yearMonthSchema.nullable().optional(),
 })
 
-// PDCA 사이클을 연결하려면 name·yearMonth가 함께 있어야 한다(둘 다 없으면 사이클 없는 버전)
-const cyclePairRule = (v: { name?: string; yearMonth?: string }) =>
-  (v.name === undefined) === (v.yearMonth === undefined)
+// Design Ref: §3.2 D-38 — 엄격 pair 술어. null(해제)과 undefined(무변경)를 구분한다.
+// 느슨한 `== null` 동치 비교는 {name:null} 편측 패치를 통과시켜 병합 부정합을 만든다(V1 반례).
+export const cyclePairRule = (v: { name?: string | null; yearMonth?: string | null }) =>
+  (v.name === undefined) === (v.yearMonth === undefined) &&
+  (v.name === null) === (v.yearMonth === null)
+export const CYCLE_PAIR_MESSAGE =
+  'PDCA 사이클 연결·해제에는 사이클명과 연월이 함께 있어야 합니다 (해제는 둘 다 null)'
 
 export const createCycleSchema = cycleFields.refine(cyclePairRule, {
-  message: 'PDCA 사이클 연결에는 사이클명과 연월이 모두 필요합니다',
+  message: CYCLE_PAIR_MESSAGE,
   path: ['name'],
 })
 export type CreateCycleInput = z.infer<typeof createCycleSchema>
 
-export const updateCycleSchema = cycleFields.partial()
+// Design Ref: §3.2 — I-1 폐쇄 지점. partial() 뒤 refine 재부착(refined 스키마엔 partial 불가).
+export const updateCycleSchema = cycleFields.partial().refine(cyclePairRule, {
+  message: CYCLE_PAIR_MESSAGE,
+  path: ['name'],
+})
 export type UpdateCycleInput = z.infer<typeof updateCycleSchema>
 
 // Design Ref: §3.2 — PAT 발급 요청. name만 입력받는다(D-04: 평문은 발급 응답에만 존재).

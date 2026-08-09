@@ -51,4 +51,40 @@ describe('shared/schema module', () => {
     const result = updateBacklogItemSchema.parse({})
     expect('closedOn' in result).toBe(false)
   })
+
+  // Design Ref: §8.2 t1~t5 — D-38(엄격 pairRule)·D-31a(name/yearMonth nullable) 실증
+  it('updateCycleSchema accepts a null pair (unlink) and preserves both nulls (t1)', async () => {
+    const { updateCycleSchema } = await import('./schema')
+    const result = updateCycleSchema.parse({ name: null, yearMonth: null })
+    expect(result.name).toBeNull()
+    expect(result.yearMonth).toBeNull()
+  })
+
+  it('updateCycleSchema rejects a lone name patch (t2, I-1 회귀 고정)', async () => {
+    const { updateCycleSchema } = await import('./schema')
+    const result = updateCycleSchema.safeParse({ name: 'x' })
+    expect(result.success).toBe(false)
+  })
+
+  it('updateCycleSchema accepts a releaseNote-only patch (t3, 부분 수정 무회귀)', async () => {
+    const { updateCycleSchema } = await import('./schema')
+    const result = updateCycleSchema.safeParse({ releaseNote: 'r' })
+    expect(result.success).toBe(true)
+  })
+
+  it('updateCycleSchema rejects a mixed null/string pair (t4, RK-20 회귀 고정)', async () => {
+    const { updateCycleSchema } = await import('./schema')
+    const result = updateCycleSchema.safeParse({ name: null, yearMonth: '2026-08' })
+    expect(result.success).toBe(false)
+  })
+
+  it('createCycleSchema accepts a null pair as an unlinked-version create (t5, FR-41)', async () => {
+    const { createCycleSchema } = await import('./schema')
+    const result = createCycleSchema.safeParse({
+      version: 'v0.1.0',
+      name: null,
+      yearMonth: null,
+    })
+    expect(result.success).toBe(true)
+  })
 })
