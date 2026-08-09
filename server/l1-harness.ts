@@ -101,3 +101,22 @@ export async function callTool(token: string | null, name: string, args: Record<
   }
   return { ok: true as const, httpStatus, isError: false as const, data }
 }
+
+type GetPromptEnvelope = {
+  result?: { description?: string; messages: Array<{ role: string; content: { type: string; text: string } }> }
+  error?: { code: number; message: string }
+}
+
+/** Design Ref: §2.1·§8.2 — prompts/get 래퍼(callTool과 대칭). SDK가 없는 프롬프트명·인자
+ * 검증 실패를 JSON-RPC 에러(-32602)로 낸다 — isError 유니온이 아니라 error 필드로 온다.
+ * Decision: [Do] 실측(module-1) — argsSchema 필드가 전부 optional이어도 SDK의 z.object()는
+ * `arguments` 자체가 undefined면 거부한다("expected object, received undefined"). `args ?? {}`로
+ * 항상 객체를 보낸다 — 실제 CC 클라이언트가 무인자 호출 시 필드를 생략하는지는 module-3에서 별도 실증한다. */
+export async function getPrompt(token: string | null, name: string, args?: Record<string, string>) {
+  const res = await rpc(token, 'prompts/get', { name, arguments: args ?? {} })
+  const httpStatus = res.status
+  const json = (await res.json()) as GetPromptEnvelope
+  if (json.error) return { ok: false as const, httpStatus, error: json.error }
+  const text = json.result?.messages[0]?.content.text ?? ''
+  return { ok: true as const, httpStatus, text }
+}
