@@ -9,7 +9,10 @@
 import { Hono } from 'hono'
 import { app } from './app.js'
 import { prmRoute } from './routes/prm.js'
+import { clerkProxyRoute } from './routes/clerk-proxy.js'
 
 export const root = new Hono()
   .route('/', app)
   .route('/.well-known/oauth-protected-resource/api/mcp', prmRoute)
+  // Design Ref: §4.1 확장 — Clerk 프로덕션 Frontend API 프록시. clerk-proxy.ts 참조.
+  .route('/__clerk', clerkProxyRoute)
