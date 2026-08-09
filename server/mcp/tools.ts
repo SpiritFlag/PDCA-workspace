@@ -6,9 +6,11 @@ import * as workspacesService from '../services/workspaces.js'
 import * as projectsService from '../services/projects.js'
 import * as documentsService from '../services/documents.js'
 import * as backlogService from '../services/backlog.js'
+import * as cyclesService from '../services/cycles.js'
 import { ServiceError } from '../lib/errors.js'
 import { MCP_ALLOWED_TARGETS, STATUS_MEANING } from '../../shared/transition.js'
 import {
+  cycleVersionSchema,
   backlogDetailSchema,
   backlogPrioritySchema,
   backlogStatusSchema,
@@ -195,6 +197,47 @@ export function registerTools(server: McpServer, ownerId: string) {
       try {
         await backlogService.reorderBacklog(ownerId, projectId, ids)
         return ok({ ok: true })
+      } catch (err) {
+        return fail(err)
+      }
+    },
+  )
+
+  // Design Ref: §4.1 D-52 — cycle_list는 releaseNote 본문을 제외한다(hasReleaseNote로 유무만).
+  // 본문은 cycle_read로만 읽는다. 성형은 어댑터 책임 — 서비스는 REST(GET /cycles)와 공유하므로
+  // 여기서 빼면 REST 응답이 회귀한다(§9.1)
+  server.registerTool(
+    'cycle_list',
+    {
+      description:
+        '프로젝트의 릴리즈(버전) 목록과 PDCA 사이클 연결 상태를 확인할 때. 릴리즈노트 본문은 제외된다(hasReleaseNote로 유무만) — 본문은 cycle_read로 읽는다',
+      inputSchema: { projectId: z.uuid() },
+    },
+    async ({ projectId }) => {
+      try {
+        const cycles = await cyclesService.listCycles(ownerId, projectId)
+        return ok(
+          cycles.map(({ releaseNote, ...rest }) => ({
+            ...rest,
+            hasReleaseNote: !!releaseNote,
+          })),
+        )
+      } catch (err) {
+        return fail(err)
+      }
+    },
+  )
+
+  server.registerTool(
+    'cycle_read',
+    {
+      description:
+        '버전 하나의 릴리즈노트 본문을 읽는다. 백로그 판단에 이전 사이클의 릴리즈 이력이 필요할 때 (version은 v0.1.0 형식)',
+      inputSchema: { projectId: z.uuid(), version: cycleVersionSchema },
+    },
+    async ({ projectId, version }) => {
+      try {
+        return ok(await cyclesService.getCycleByVersion(ownerId, projectId, version))
       } catch (err) {
         return fail(err)
       }

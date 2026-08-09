@@ -15,6 +15,15 @@ export async function listCycles(ownerId: string, projectId: string) {
   return db.listCycles(ownerId, projectId)
 }
 
+/** Design Ref: §4.2 — cycle_read(MCP)의 단건 조회. ensureProject 선행으로 타인 프로젝트는
+ * version 존재 여부와 무관하게 404(m12). version 없음도 같은 NOT_FOUND(§6.2, 존재 여부 누설 방지) */
+export async function getCycleByVersion(ownerId: string, projectId: string, version: string) {
+  await ensureProject(ownerId, projectId)
+  const cycle = await db.getCycleByVersion(ownerId, projectId, version)
+  if (!cycle) throw new ServiceError('NOT_FOUND', '')
+  return cycle
+}
+
 export async function createCycle(ownerId: string, projectId: string, input: CreateCycleInput) {
   const result = await db.createCycle(ownerId, projectId, input)
   if ('error' in result) {

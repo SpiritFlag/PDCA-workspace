@@ -7,10 +7,10 @@
 // 기존 `cleanup()`(l1-harness.js)이 함께 지운다.
 //
 // module-1에서 m1·m2를 개정 전 기준선(red — isError)으로 먼저 기록했다(§8.5). module-2에서
-// S1·S2 구현 후 m1·m2가 성공으로 반전되고, m3~m6이 채워진다. m7~m13(cycles·reorder)은 module-3.
+// S1·S2 구현 후 m1·m2가 성공으로 반전되고, m3~m6이 채워졌다. module-3이 m7~m13(cycles·reorder)을 채운다.
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { callTool, cleanup, hasDb, mintToken, req, seedWorkspaceProject } from './l1-harness.js'
+import { callTool, cleanup, hasDb, mintToken, req, rpc, seedWorkspaceProject } from './l1-harness.js'
 
 async function createItem(token: string, projectId: string, title: string) {
   const res = await req(token, `/api/projects/${projectId}/backlog`, {
@@ -24,8 +24,10 @@ async function createItem(token: string, projectId: string, title: string) {
 describe.skipIf(!hasDb)('mcp L1 (실 dev DB)', () => {
   const RUN = randomUUID().slice(0, 8)
   const OWNER_A = `hns-owner-mcp-a-${RUN}`
+  const OWNER_B = `hns-owner-mcp-b-${RUN}` // FX-B — 프로젝트 없음, m12 타인 경계 전용
 
   let tokenA: string
+  let tokenB: string
   let projectA: string
   // FX-item1 — m1→m2→m5 3단 순차 종속(Plan §1.3.4)
   let itemId1: string
@@ -36,12 +38,28 @@ describe.skipIf(!hasDb)('mcp L1 (실 dev DB)', () => {
   beforeAll(async () => {
     await cleanup() // 이전 실행 잔여물 선제거(FR-50)
     tokenA = await mintToken(OWNER_A, 'hns-mcp-l1-a')
+    tokenB = await mintToken(OWNER_B, 'hns-mcp-l1-b')
     ;({ projectId: projectA } = await seedWorkspaceProject(tokenA, 'mcp-a'))
 
     itemId1 = await createItem(tokenA, projectA, 'hns-item1')
     itemId2 = await createItem(tokenA, projectA, 'hns-item2')
     itemId3 = await createItem(tokenA, projectA, 'hns-item3')
     itemId4 = await createItem(tokenA, projectA, 'hns-item4')
+
+    // FX-cycle1(연결 버전, releaseNote 있음)·FX-cycle2(미연결 버전) — m9~m12
+    await req(tokenA, `/api/projects/${projectA}/cycles`, {
+      method: 'POST',
+      body: JSON.stringify({
+        version: 'v9.1.1',
+        name: 'hns-cycle-mcp',
+        yearMonth: '2026-08',
+        releaseNote: 'hns release note body',
+      }),
+    })
+    await req(tokenA, `/api/projects/${projectA}/cycles`, {
+      method: 'POST',
+      body: JSON.stringify({ version: 'v9.1.2' }),
+    })
   })
 
   afterAll(cleanup)
@@ -89,5 +107,69 @@ describe.skipIf(!hasDb)('mcp L1 (실 dev DB)', () => {
       body: JSON.stringify({ status: 'doing' }),
     })
     expect(res.status).toBe(200)
+  })
+
+  // ── m7~m13: S3 cycles 읽기 툴 + S5 backlog_reorder 실행 확인 ──
+
+  it('m7 tools/list — 정확히 10개, delete 계열 0', async () => {
+    const res = await rpc(tokenA, 'tools/list')
+    const json = (await res.json()) as { result: { tools: Array<{ name: string }> } }
+    expect(json.result.tools).toHaveLength(10)
+    expect(json.result.tools.some((t) => t.name.includes('delete'))).toBe(false)
+  })
+
+  it('m8 MCP backlog_reorder 실행 확인 (S5)', async () => {
+    const result = await callTool(tokenA, 'backlog_reorder', {
+      projectId: projectA,
+      ids: [itemId4, itemId3, itemId2, itemId1],
+    })
+    expect(result.isError).toBe(false)
+    expect(result.data).toEqual({ ok: true })
+  })
+
+  it('m9 cycle_list — 미연결분은 name·yearMonth null, releaseNote 키 부재(hasReleaseNote만)', async () => {
+    const result = await callTool(tokenA, 'cycle_list', { projectId: projectA })
+    expect(result.isError).toBe(false)
+    const rows = result.data as Array<{
+      version: string
+      name: string | null
+      yearMonth: string | null
+      hasReleaseNote: boolean
+      releaseNote?: unknown
+    }>
+    expect(rows).toHaveLength(2)
+    const unlinked = rows.find((r) => r.version === 'v9.1.2')
+    expect(unlinked?.name).toBeNull()
+    expect(unlinked?.yearMonth).toBeNull()
+    expect(unlinked?.hasReleaseNote).toBe(false)
+    expect('releaseNote' in (unlinked ?? {})).toBe(false)
+    const linked = rows.find((r) => r.version === 'v9.1.1')
+    expect(linked?.hasReleaseNote).toBe(true)
+    expect('releaseNote' in (linked ?? {})).toBe(false)
+  })
+
+  it('m10 cycle_read v9.1.1 — releaseNote 본문 일치', async () => {
+    const result = await callTool(tokenA, 'cycle_read', { projectId: projectA, version: 'v9.1.1' })
+    expect(result.isError).toBe(false)
+    expect((result.data as { releaseNote: string }).releaseNote).toBe('hns release note body')
+  })
+
+  it('m11 cycle_read 없는 version — NOT_FOUND', async () => {
+    const result = await callTool(tokenA, 'cycle_read', { projectId: projectA, version: 'v9.9.9' })
+    expect(result.isError).toBe(true)
+    if (!result.isError) throw new Error('unreachable')
+    expect(result.text).toContain('NOT_FOUND')
+  })
+
+  it('m12 B 토큰으로 A의 cycle_read — NOT_FOUND (구분 없음)', async () => {
+    const result = await callTool(tokenB, 'cycle_read', { projectId: projectA, version: 'v9.1.1' })
+    expect(result.isError).toBe(true)
+    if (!result.isError) throw new Error('unreachable')
+    expect(result.text).toContain('NOT_FOUND')
+  })
+
+  it('m13 미인증 /api/mcp POST — 401', async () => {
+    const res = await rpc(null, 'tools/list')
+    expect(res.status).toBe(401)
   })
 })
