@@ -14,22 +14,29 @@ import { ServiceError } from '../lib/errors.js'
 import { isPatToken } from '../lib/token.js'
 import { authMiddleware, unauthorized, type AuthEnv } from './auth.js'
 
-let _clerkJwks: ReturnType<typeof createRemoteJWKSet> | null = null
-
-function clerkIssuer(): string {
-  const issuer = process.env.CLERK_ISSUER
-  if (!issuer) throw new Error('CLERK_ISSUER is not set')
-  return issuer
-}
-
-function clerkJwks() {
-  if (_clerkJwks) return _clerkJwks
-  _clerkJwks = createRemoteJWKSet(new URL(`${clerkIssuer()}/.well-known/jwks.json`))
-  return _clerkJwks
+// Check Gap M-4 — issuer별로 캐시해 CLERK_ISSUER가 바뀌어도(테스트에서 실제로 이런다) 옛
+// JWKS를 계속 쓰지 않는다. issuer는 항상 assertOAuthEnv() 검증을 거친 값만 들어온다.
+const _clerkJwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>()
+function clerkJwks(issuer: string) {
+  let jwks = _clerkJwksCache.get(issuer)
+  if (!jwks) {
+    jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`))
+    _clerkJwksCache.set(issuer, jwks)
+  }
+  return jwks
 }
 
 // Design Ref: §2.1 — 서명 검증 전 프리디코드. 분기 결정에만 쓴다(신뢰 근거 아님) —
 // ownerId 주입은 반드시 jwtVerify 성공 이후에만 일어난다(§1.2·§7 보안 원칙).
+//
+// Check Gap I-1 (알려진 한계, 의도적으로 안 고침) — CLERK_ISSUER가 비어있으면 `iss`가
+// 무엇이든 `undefined`와 절대 같을 수 없어 이 함수가 항상 false를 반환한다. 즉 Clerk형
+// JWT라도 분기에 진입하지 못하고 그대로 legacy(authMiddleware)로 위임돼 401
+// "Invalid or expired token"으로 끝난다 — assertOAuthEnv()의 500 fail-fast(D-105)가
+// 아니라 조용한 401이 된다는 뜻. CLERK_ISSUER는 이 게이트 자체의 조건이라 함수 안에서
+// "없어서 fail-fast" 케이스를 원리적으로 구분할 수 없다(휴리스틱 없이는). .env.local.example
+// 로 이 env 자체를 빠뜨리기 어렵게 하는 쪽으로 방어한다(Check Gap I-2). L1 a5b가 이 현재
+// 동작(401)을 회귀 테스트로 고정해 둔다.
 function isClerkIssued(token: string): boolean {
   try {
     const { iss } = decodeJwt(token)
@@ -81,7 +88,7 @@ export const mcpAuth = createMiddleware<AuthEnv>(async (c, next) => {
     const { issuer, subject, ownerId } = assertOAuthEnv()
     // Design Ref: §5 D-108 — Clerk형 JWT 검증 실패 시 legacy로 재시도하지 않는다(구조적 차단).
     try {
-      const { payload } = await jwtVerify(token, clerkJwks(), { issuer })
+      const { payload } = await jwtVerify(token, clerkJwks(issuer), { issuer })
       c.set('ownerId', resolveOwnerId(payload.sub, subject, ownerId))
     } catch (e) {
       if (e instanceof HTTPException) throw withWwwAuthenticate(e, c)
