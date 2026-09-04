@@ -38,7 +38,7 @@ export function CycleList({
   const [stageCreate, setStageCreate] = useState<{
     name: string
     stage: PdcaStage
-    yearMonth: string
+    dir: string
   } | null>(null)
 
   const existingPaths = new Set((documents ?? []).map((d) => d.path))
@@ -132,7 +132,7 @@ export function CycleList({
                   version: cycle.version,
                   releaseNote: cycle.releaseNote ?? undefined,
                   name: cycle.name ?? undefined,
-                  yearMonth: cycle.yearMonth ?? undefined,
+                  dir: cycle.dir ?? undefined,
                 }}
                 onSubmit={(input) => handleUpdate(cycle.id, input)}
                 onCancel={() => setEditingId(null)}
@@ -146,7 +146,7 @@ export function CycleList({
                 projSlug={projSlug}
                 existingPaths={existingPaths}
                 onCreateStage={(stage) =>
-                  setStageCreate({ name: cycle.name!, stage, yearMonth: cycle.yearMonth! })
+                  setStageCreate({ name: cycle.name!, stage, dir: cycle.dir! })
                 }
                 onEdit={() => {
                   setEditingId(cycle.id)

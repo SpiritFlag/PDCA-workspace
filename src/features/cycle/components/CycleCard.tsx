@@ -1,5 +1,5 @@
-// 버전 카드 — 버전 클릭 시 릴리즈 상세로 이동(D-78, 릴리즈노트·삭제는 상세로 이관).
-// PDCA 사이클 연결 시 4버튼(plan/design/analysis/report)은 카드에 유지.
+// 버전 카드 — 버전 클릭 시 릴리즈 상세로 이동(릴리즈노트·삭제는 상세로 이관).
+// PDCA 사이클 연결 시 6버튼(plan/design/do/analysis/report/release)은 카드에 유지.
 import { Link } from 'react-router-dom'
 import { STAGE_COLOR } from '@/features/document/lib/stageColor'
 import { PDCA_STAGES, cycleStagePath, type PdcaStage } from '../lib/cyclePath'
@@ -10,7 +10,7 @@ type Cycle = {
   version: string
   releaseNote?: string | null
   name?: string | null
-  yearMonth?: string | null
+  dir?: string | null
 }
 
 export function CycleCard({
@@ -28,7 +28,8 @@ export function CycleCard({
   onCreateStage: (stage: PdcaStage) => void
   onEdit: () => void
 }) {
-  const hasCycle = !!cycle.name && !!cycle.yearMonth
+  const { name, dir } = cycle
+  const hasCycle = !!name && !!dir
 
   return (
     <div className="rounded-lg border border-(--ctp-surface0) bg-(--ctp-mantle) p-4">
@@ -41,7 +42,7 @@ export function CycleCard({
             {cycle.version}
           </span>
           {hasCycle && (
-            <span className="truncate font-mono text-xs text-(--ctp-overlay0)">{cycle.name}</span>
+            <span className="truncate font-mono text-xs text-(--ctp-overlay0)">{name}</span>
           )}
         </Link>
         <div className="flex shrink-0 gap-2 text-sm">
@@ -51,10 +52,10 @@ export function CycleCard({
         </div>
       </div>
 
-      {hasCycle && (
-        <div className="mt-3 grid grid-cols-4 gap-2">
+      {hasCycle && dir && (
+        <div className="mt-3 grid grid-cols-6 gap-2">
           {PDCA_STAGES.map((stage) => {
-            const path = cycleStagePath(cycle.yearMonth!, cycle.name!, stage)
+            const path = cycleStagePath(dir, stage)
             const exists = existingPaths.has(path)
             return exists ? (
               <Link

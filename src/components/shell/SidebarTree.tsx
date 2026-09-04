@@ -172,8 +172,8 @@ function VersionsSection({
   )
 }
 
-// Design Ref: §5.2, §9 D-80 — 버전 행. hasCycle이면 토글로 4문서를 펼친다(기본 접힘).
-// TreeItem(폴더 재귀) 미사용 — 4개 고정이라 전용 평면 렌더가 단순하다(Plan §3.1 M-3).
+// 버전 행. hasCycle이면 토글로 6문서를 펼친다(기본 접힘).
+// TreeItem(폴더 재귀) 미사용 — 6개 고정이라 전용 평면 렌더가 단순하다.
 function VersionRow({
   ws,
   project,
@@ -182,13 +182,13 @@ function VersionRow({
 }: {
   ws: { slug: string }
   project: { slug: string }
-  cycle: { version: string; name?: string | null; yearMonth?: string | null }
+  cycle: { version: string; name?: string | null; dir?: string | null }
   existingPaths: Set<string>
 }) {
   const [docsOpen, setDocsOpen] = useState(false)
-  // Design Ref: §1.2 — 로컬 const 구조분해로 클로저(.map 콜백) 너머까지 내로잉을 유지한다.
-  const { name, yearMonth } = cycle
-  const hasCycle = !!name && !!yearMonth
+  // 로컬 const 구조분해로 클로저(.map 콜백) 너머까지 내로잉을 유지한다.
+  const { name, dir } = cycle
+  const hasCycle = !!name && !!dir
 
   return (
     <div>
@@ -212,10 +212,10 @@ function VersionRow({
           )}
         </Link>
       </div>
-      {hasCycle && docsOpen && name && yearMonth && (
+      {hasCycle && docsOpen && dir && (
         <div className="flex flex-col gap-0.5">
           {PDCA_STAGES.map((stage) => {
-            const path = cycleStagePath(yearMonth, name, stage)
+            const path = cycleStagePath(dir, stage)
             const exists = existingPaths.has(path)
             return exists ? (
               <Link

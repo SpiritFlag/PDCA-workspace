@@ -58,15 +58,15 @@ describe.skipIf(!hasDb)('cycles L1 (실 dev DB)', () => {
   })
 
   let cycleUnlinkedId: string
-  it('#3 사이클 미연결 버전 생성 → 201, name·yearMonth null', async () => {
+  it('#3 사이클 미연결 버전 생성 → 201, name·dir null', async () => {
     const res = await req(tokenA, `/api/projects/${projectA}/cycles`, {
       method: 'POST',
       body: JSON.stringify({ version: 'v9.0.1' }),
     })
     expect(res.status).toBe(201)
-    const { data } = await body<{ id: string; name: string | null; yearMonth: string | null }>(res)
+    const { data } = await body<{ id: string; name: string | null; dir: string | null }>(res)
     expect(data.name).toBeNull()
-    expect(data.yearMonth).toBeNull()
+    expect(data.dir).toBeNull()
     cycleUnlinkedId = data.id
   })
 
@@ -74,12 +74,12 @@ describe.skipIf(!hasDb)('cycles L1 (실 dev DB)', () => {
   it('#4 사이클 연결 버전 생성 → 201, 둘 다 저장', async () => {
     const res = await req(tokenA, `/api/projects/${projectA}/cycles`, {
       method: 'POST',
-      body: JSON.stringify({ version: 'v9.0.2', name: 'hns-cycle-a', yearMonth: '2026-08' }),
+      body: JSON.stringify({ version: 'v9.0.2', name: 'hns-cycle-a', dir: 'docs/PDCA/v9/v9.0.2-hns-cycle-a' }),
     })
     expect(res.status).toBe(201)
-    const { data } = await body<{ id: string; name: string | null; yearMonth: string | null }>(res)
+    const { data } = await body<{ id: string; name: string | null; dir: string | null }>(res)
     expect(data.name).toBe('hns-cycle-a')
-    expect(data.yearMonth).toBe('2026-08')
+    expect(data.dir).toBe('docs/PDCA/v9/v9.0.2-hns-cycle-a')
     cycleLinkedId = data.id
   })
 
@@ -89,7 +89,7 @@ describe.skipIf(!hasDb)('cycles L1 (실 dev DB)', () => {
     // 번지는 것을 실행 후 발견했다(red 1회차). 이 시나리오만 전용 레코드로 격리해 부작용을 차단한다.
     const seed = await req(tokenA, `/api/projects/${projectA}/cycles`, {
       method: 'POST',
-      body: JSON.stringify({ version: 'v9.0.7', name: 'hns-cycle-i1', yearMonth: '2026-08' }),
+      body: JSON.stringify({ version: 'v9.0.7', name: 'hns-cycle-i1', dir: 'docs/PDCA/v9/v9.0.7-hns-cycle-i1' }),
     })
     const { data: cycle } = await body<{ id: string }>(seed)
     const res = await req(tokenA, `/api/cycles/${cycle.id}`, {
@@ -108,13 +108,12 @@ describe.skipIf(!hasDb)('cycles L1 (실 dev DB)', () => {
     expect((await errBody(res)).error.details?.target).toBe('version')
   })
 
-  it('#7 같은 name 재생성 → 409 target:name', async () => {
+  it('#7 같은 name 재생성 → 201 (pdca-skill v1: 사이클명은 유일하지 않다, 열쇠는 version)', async () => {
     const res = await req(tokenA, `/api/projects/${projectA}/cycles`, {
       method: 'POST',
-      body: JSON.stringify({ version: 'v9.0.3', name: 'hns-cycle-a', yearMonth: '2026-08' }),
+      body: JSON.stringify({ version: 'v9.0.3', name: 'hns-cycle-a', dir: 'docs/PDCA/v9/v9.0.3-hns-cycle-a' }),
     })
-    expect(res.status).toBe(409)
-    expect((await errBody(res)).error.details?.target).toBe('name')
+    expect(res.status).toBe(201)
   })
 
   it('#8 잘못된 버전 형식 → 400', async () => {
@@ -128,7 +127,7 @@ describe.skipIf(!hasDb)('cycles L1 (실 dev DB)', () => {
   it('#9 한글 사이클명 → 400', async () => {
     const res = await req(tokenA, `/api/projects/${projectA}/cycles`, {
       method: 'POST',
-      body: JSON.stringify({ version: 'v9.0.5', name: '한글이름', yearMonth: '2026-08' }),
+      body: JSON.stringify({ version: 'v9.0.5', name: '한글이름', dir: 'docs/PDCA/v9/v9.0.5-x' }),
     })
     expect(res.status).toBe(400)
   })
@@ -136,7 +135,7 @@ describe.skipIf(!hasDb)('cycles L1 (실 dev DB)', () => {
   it('#10 [RED] PATCH로 연결 해제 → 200 기대 (C-1 재현)', async () => {
     const res = await req(tokenA, `/api/cycles/${cycleLinkedId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ name: null, yearMonth: null }),
+      body: JSON.stringify({ name: null, dir: null }),
     })
     expect(res.status).toBe(200)
   })
@@ -154,52 +153,52 @@ describe.skipIf(!hasDb)('cycles L1 (실 dev DB)', () => {
 
   // ── n1~n4: Plan §1.3.2 신규 — C-1·I-1의 회귀 고정 (전부 #10에 종속하거나 #5와 대칭) ──
 
-  it('n1 [RED, #10 종속] 해제 후 재조회 → name·yearMonth 둘 다 null', async () => {
+  it('n1 [RED, #10 종속] 해제 후 재조회 → name·dir 둘 다 null', async () => {
     // Design Ref: §4.1 — cycleItemRoute에 단건 GET이 없으므로 목록에서 찾는다
     const list = await req(tokenA, `/api/projects/${projectA}/cycles`)
-    const { data } = await body<Array<{ id: string; name: string | null; yearMonth: string | null }>>(
+    const { data } = await body<Array<{ id: string; name: string | null; dir: string | null }>>(
       list,
     )
     const found = data.find((c) => c.id === cycleLinkedId)
     expect(found?.name).toBeNull()
-    expect(found?.yearMonth).toBeNull()
+    expect(found?.dir).toBeNull()
   })
 
   it('n2 [RED, #10 종속] 해제된 이름을 다른 버전에 부여 → 201 (409 아님)', async () => {
     const res = await req(tokenA, `/api/projects/${projectA}/cycles`, {
       method: 'POST',
-      body: JSON.stringify({ version: 'v9.0.6', name: 'hns-cycle-a', yearMonth: '2026-08' }),
+      body: JSON.stringify({ version: 'v9.0.6', name: 'hns-cycle-a', dir: 'docs/PDCA/v9/v9.0.2-hns-cycle-a' }),
     })
     expect(res.status).toBe(201)
   })
 
-  it('n3 [RED, #5 대칭] yearMonth만 단독 PATCH → 400 기대', async () => {
+  it('n3 [RED, #5 대칭] dir만 단독 PATCH → 400 기대', async () => {
     // Decision: [Do] #5와 같은 이유로 전용 레코드 격리 — 대상은 §5(원안)의 cycleUnlinkedId가
     // 아니다(#11에서 이미 DELETE돼 404가 나므로 시나리오 의미가 깨진다).
     const seed = await req(tokenA, `/api/projects/${projectA}/cycles`, {
       method: 'POST',
-      body: JSON.stringify({ version: 'v9.0.8', name: 'hns-cycle-i2', yearMonth: '2026-08' }),
+      body: JSON.stringify({ version: 'v9.0.8', name: 'hns-cycle-i2', dir: 'docs/PDCA/v9/v9.0.8-hns-cycle-i2' }),
     })
     const { data: cycle } = await body<{ id: string }>(seed)
     const res = await req(tokenA, `/api/cycles/${cycle.id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ yearMonth: '2026-09' }),
+      body: JSON.stringify({ dir: 'docs/PDCA/v9/other' }),
     })
     expect(res.status).toBe(400)
   })
 
-  it('n4 releaseNote 단독 PATCH → 200, name·yearMonth 유지 (무회귀)', async () => {
+  it('n4 releaseNote 단독 PATCH → 200, name·dir 유지 (무회귀)', async () => {
     const res = await req(tokenA, `/api/cycles/${cycleLinkedId}`, {
       method: 'PATCH',
       body: JSON.stringify({ releaseNote: 'hns note' }),
     })
     // n2가 이름을 재사용해도 cycleLinkedId 레코드 자체는 해제 상태(name:null) 그대로다
     expect(res.status).toBe(200)
-    const { data } = await body<{ releaseNote: string; name: string | null; yearMonth: string | null }>(
+    const { data } = await body<{ releaseNote: string; name: string | null; dir: string | null }>(
       res,
     )
     expect(data.releaseNote).toBe('hns note')
     expect(data.name).toBeNull()
-    expect(data.yearMonth).toBeNull()
+    expect(data.dir).toBeNull()
   })
 })

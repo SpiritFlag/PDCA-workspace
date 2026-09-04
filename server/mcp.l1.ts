@@ -52,7 +52,7 @@ describe.skipIf(!hasDb)('mcp L1 (실 dev DB)', () => {
       body: JSON.stringify({
         version: 'v9.1.1',
         name: 'hns-cycle-mcp',
-        yearMonth: '2026-08',
+        dir: 'docs/PDCA/v9/v9.1.1-hns-cycle-mcp',
         releaseNote: 'hns release note body',
       }),
     })
@@ -127,20 +127,20 @@ describe.skipIf(!hasDb)('mcp L1 (실 dev DB)', () => {
     expect(result.data).toEqual({ ok: true })
   })
 
-  it('m9 cycle_list — 미연결분은 name·yearMonth null, releaseNote 키 부재(hasReleaseNote만)', async () => {
+  it('m9 cycle_list — 미연결분은 name·dir null, releaseNote 키 부재(hasReleaseNote만)', async () => {
     const result = await callTool(tokenA, 'cycle_list', { projectId: projectA })
     expect(result.isError).toBe(false)
     const rows = result.data as Array<{
       version: string
       name: string | null
-      yearMonth: string | null
+      dir: string | null
       hasReleaseNote: boolean
       releaseNote?: unknown
     }>
     expect(rows).toHaveLength(2)
     const unlinked = rows.find((r) => r.version === 'v9.1.2')
     expect(unlinked?.name).toBeNull()
-    expect(unlinked?.yearMonth).toBeNull()
+    expect(unlinked?.dir).toBeNull()
     expect(unlinked?.hasReleaseNote).toBe(false)
     expect('releaseNote' in (unlinked ?? {})).toBe(false)
     const linked = rows.find((r) => r.version === 'v9.1.1')

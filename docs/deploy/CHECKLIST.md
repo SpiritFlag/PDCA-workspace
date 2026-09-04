@@ -22,6 +22,13 @@ DATABASE_URL=<main-branch-url> npx drizzle-kit migrate
 
 **적용 확인**: 새 테이블/컬럼을 쓰는 엔드포인트를 실 요청으로 1회 확인(예: `GET /api/tokens`).
 
+**0004·0005 (pdca-skill v1, `cycles.dir` · 6 stage)**: 두 파일이 한 쌍이다. 0004가 enum 값과
+`dir` 컬럼을 추가하고 `year_month`에서 `docs/PDCA/{year_month}/{name}`으로 백필한 뒤, 0005가
+`year_month`와 `cycles_proj_name_uq`를 지운다. `npx drizzle-kit migrate`는 둘을 순서대로
+적용한다. 적용 확인은 `GET /api/projects/:id/cycles` 응답에 `dir`이 채워졌는지, 그리고
+`pdcaw@1 upload --version …`이 사이클 생성에 성공하는지로 한다. enum 값 추가는 되돌릴 수
+없으므로(PostgreSQL) 롤백 시에도 §4 원칙대로 코드만 되돌린다.
+
 **미적용 시 증상 (실사례, backlog-with-mcp 사이클)**: main 브랜치에 마이그레이션을 안 넣고
 배포했더니 `/api/tokens` 500(테이블 없음). Vercel 함수 로그의 `INTERNAL`/스택트레이스로만
 드러났다 — 브라우저에서는 그냥 "안 됨"으로만 보인다.

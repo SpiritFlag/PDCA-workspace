@@ -51,8 +51,8 @@ export function ReleasePage() {
 
   // Design Ref: §1.2 — 로컬 const로 구조분해해 클로저 경계를 넘어도 내로잉이 유지되게 한다
   // (TS는 프로퍼티 접근의 내로잉을 클로저 너머로 보존하지 않는다). `!` 단언 대신 이 방식을 쓴다.
-  const { id: cycleId, version: cycleVersion, name, yearMonth, releaseNote } = cycle
-  const hasCycle = !!name && !!yearMonth
+  const { id: cycleId, version: cycleVersion, name, dir, releaseNote } = cycle
+  const hasCycle = !!name && !!dir
   const note = releaseNote?.trim()
   const existingPaths = new Set((documents ?? []).map((d) => d.path))
 
@@ -82,10 +82,10 @@ export function ReleasePage() {
         )}
       </div>
 
-      {hasCycle && name && yearMonth && (
-        <div className="mb-8 grid grid-cols-4 gap-2">
+      {hasCycle && dir && (
+        <div className="mb-8 grid grid-cols-6 gap-2">
           {PDCA_STAGES.map((stage) => {
-            const path = cycleStagePath(yearMonth, name, stage)
+            const path = cycleStagePath(dir, stage)
             const exists = existingPaths.has(path)
             return exists ? (
               <Link

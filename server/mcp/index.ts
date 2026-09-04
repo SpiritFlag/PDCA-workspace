@@ -5,7 +5,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPTransport } from '@hono/mcp'
 import type { AuthEnv } from '../middleware/auth.js'
 import { registerTools } from './tools.js'
-import { registerPrompts } from './prompts.js'
 import { ServiceError } from '../lib/errors.js'
 
 export const mcpRoute = new Hono<AuthEnv>()
@@ -19,10 +18,9 @@ export const mcpRoute = new Hono<AuthEnv>()
     // Design Ref: §4.3 — ownerId별로 서버·트랜스포트를 새로 만드는 게 곧 stateless의 실체.
     // 세션 대신 요청마다 인스턴스를 격리하므로 동시 요청 간 ownerId 혼선이 구조적으로 불가능하다.
     const server = new McpServer({ name: 'pdca-workspace', version: '1.0.0' })
+    // capability 등록은 connect() 이전에만 유효하다(RK-57).
+    // pdca-skill v1: 프롬프트 표면(backlog_sync·make_cc_prompt)은 제거됐다 — 절차는 스킬이 정본이다.
     registerTools(server, c.get('ownerId'))
-    // Design Ref: §2.1 RK-57 — connect() 이전에만 capability 등록이 유효하다.
-    // 이후로 옮기면 SDK가 registerCapabilities에서 throw한다.
-    registerPrompts(server)
     const transport = new StreamableHTTPTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
