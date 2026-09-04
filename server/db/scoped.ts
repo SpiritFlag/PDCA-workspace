@@ -277,27 +277,12 @@ export async function getCycleByVersion(ownerId: string, projectId: string, vers
   return row?.cycle ?? null
 }
 
-export async function getCycleByName(ownerId: string, projectId: string, name: string) {
-  const [row] = await getDb()
-    .select({ cycle: cycles })
-    .from(cycles)
-    .innerJoin(projects, eq(cycles.projectId, projects.id))
-    .innerJoin(workspaces, eq(projects.workspaceId, workspaces.id))
-    .where(
-      and(eq(cycles.projectId, projectId), eq(cycles.name, name), eq(workspaces.ownerId, ownerId)),
-    )
-  return row?.cycle ?? null
-}
-
+// pdca-skill v1: 사이클명은 유일하지 않다 — 열쇠는 version뿐. name 중복 검사는 없다.
 export async function createCycle(ownerId: string, projectId: string, input: CreateCycleInput) {
   const project = await getProject(ownerId, projectId)
   if (!project) return { error: 'PROJECT_NOT_FOUND' as const }
   const dupVersion = await getCycleByVersion(ownerId, projectId, input.version)
   if (dupVersion) return { error: 'VERSION_TAKEN' as const, version: input.version }
-  if (input.name) {
-    const dupName = await getCycleByName(ownerId, projectId, input.name)
-    if (dupName) return { error: 'NAME_TAKEN' as const, name: input.name }
-  }
   const [row] = await getDb()
     .insert(cycles)
     .values({ projectId, ...input })
@@ -311,10 +296,6 @@ export async function updateCycle(ownerId: string, id: string, input: UpdateCycl
   if (input.version && input.version !== existing.version) {
     const dup = await getCycleByVersion(ownerId, existing.projectId, input.version)
     if (dup) return { error: 'VERSION_TAKEN' as const, version: input.version }
-  }
-  if (input.name && input.name !== existing.name) {
-    const dup = await getCycleByName(ownerId, existing.projectId, input.name)
-    if (dup) return { error: 'NAME_TAKEN' as const, name: input.name }
   }
   const [row] = await getDb()
     .update(cycles)

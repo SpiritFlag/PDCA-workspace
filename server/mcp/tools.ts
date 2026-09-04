@@ -120,15 +120,45 @@ export function registerTools(server: McpServer, ownerId: string) {
     },
   )
 
+  // pdca-skill v1 §9.2 — 기본은 요약(detail 없음). 큰 보드가 컨텍스트에 들어오게. detail은 backlog_get으로.
   server.registerTool(
     'backlog_list',
     {
-      description: '백로그 조회(상태 필터 가능). 정리 작업 전 기존 항목 전체를 파악할 때(기본: 전 상태)',
-      inputSchema: { projectId: z.uuid(), status: z.array(backlogStatusSchema).optional() },
+      description:
+        '백로그 조회. 기본은 detail을 뺀 요약 행(id·title·status·priority·openedOn·closedOn·updatedAt). ' +
+        'status(배열)·staleDays(todo 중 N일 이상 정체)·q(제목·detail 부분일치)로 거른다. ' +
+        'detail 본문은 backlog_get으로 한 건씩 읽는다. detail:true를 주면 전체 행',
+      inputSchema: {
+        projectId: z.uuid(),
+        status: z.array(backlogStatusSchema).optional(),
+        staleDays: z.number().int().min(0).optional(),
+        q: z.string().max(300).optional(),
+        detail: z.boolean().optional(),
+      },
     },
-    async ({ projectId, status }) => {
+    async ({ projectId, status, staleDays, q, detail }) => {
       try {
-        return ok(await backlogService.listBacklog(ownerId, projectId, status))
+        const opts = { statuses: status, staleDays, q }
+        return ok(
+          detail
+            ? await backlogService.listBacklog(ownerId, projectId, opts)
+            : await backlogService.listBacklogSummary(ownerId, projectId, opts),
+        )
+      } catch (err) {
+        return fail(err)
+      }
+    },
+  )
+
+  server.registerTool(
+    'backlog_get',
+    {
+      description: '백로그 항목 한 건(detail 포함). backlog_list 요약에서 고른 id로 읽는다',
+      inputSchema: { id: z.uuid() },
+    },
+    async ({ id }) => {
+      try {
+        return ok(await backlogService.getBacklogItem(ownerId, id))
       } catch (err) {
         return fail(err)
       }
@@ -164,12 +194,14 @@ export function registerTools(server: McpServer, ownerId: string) {
     {
       // Design Ref: §4.1 FR-61 — description을 STATUS_MEANING에서 조립한다(문자열 복제 금지, D-45)
       description:
-        `항목 갱신. status 지정 기준 — doing: ${STATUS_MEANING.doing} / done: ${STATUS_MEANING.done} / resolved: ${STATUS_MEANING.resolved} / dropped: ${STATUS_MEANING.dropped}. todo로 되돌리기는 사용자 전용이라 거부된다(D-42). 날짜는 YYYY-MM-DD 형식`,
+        `항목 갱신. status 지정 기준 — doing: ${STATUS_MEANING.doing} / done: ${STATUS_MEANING.done} / resolved: ${STATUS_MEANING.resolved} / dropped: ${STATUS_MEANING.dropped}. todo로 되돌리기는 사용자 전용이라 거부된다(D-42). 날짜는 YYYY-MM-DD 형식. ` +
+        'detail은 전체 교체, appendDetail은 기존 본문 앞에 블록을 얹고 원안을 보존한다(둘 중 하나만)',
       inputSchema: {
         id: z.uuid(),
         title: backlogTitleSchema.optional(),
         priority: backlogPrioritySchema.optional(),
         detail: backlogDetailSchema.optional(),
+        appendDetail: backlogDetailSchema.optional(),
         openedOn: dateStringSchema.optional(),
         // Design Ref: §4.2 D-21 — 지우기는 형의 정정 행위. shared는 nullable이지만 MCP는 null 배제
         closedOn: dateStringSchema.optional(),

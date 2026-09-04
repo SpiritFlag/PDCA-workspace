@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useWorkspaces } from '@/features/workspace/hooks/useWorkspaces'
 import { useProjects } from '@/features/project/hooks/useProjects'
 import { useDocuments } from '@/features/document/hooks/useDocuments'
+import { useDocumentByPath } from '@/features/document/hooks/useDocumentByPath'
 import { STAGE_COLOR } from '@/features/document/lib/stageColor'
 import { useCycles, useDeleteCycle } from '../hooks/useCycles'
 import { PDCA_STAGES, cycleStagePath } from '../lib/cyclePath'
@@ -27,6 +28,13 @@ export function ReleasePage() {
   const { data: documents } = useDocuments(project?.id ?? '')
   const deleteMut = useDeleteCycle(project?.id ?? '')
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // pdca-skill v1 §9.4 — release 문서가 있으면 그것이 이 버전의 릴리즈노트다. cycles.releaseNote는
+  // 옛 데이터·수동 입력용으로 남긴다. 훅 규칙 때문에 early return 앞에서 경로를 계산해 호출한다.
+  const cycleForNote = cycles?.find((c) => c.version === version)
+  const releaseDocPath = cycleForNote?.dir ? cycleStagePath(cycleForNote.dir, 'release') : ''
+  const hasReleaseDoc = !!releaseDocPath && (documents ?? []).some((d) => d.path === releaseDocPath)
+  const { data: releaseDoc } = useDocumentByPath(project?.id ?? '', hasReleaseDoc ? releaseDocPath : '')
 
   if (wsLoading || (workspace && projLoading)) {
     return <p className="p-8 text-(--ctp-subtext1)">불러오는 중...</p>
@@ -51,9 +59,9 @@ export function ReleasePage() {
 
   // Design Ref: §1.2 — 로컬 const로 구조분해해 클로저 경계를 넘어도 내로잉이 유지되게 한다
   // (TS는 프로퍼티 접근의 내로잉을 클로저 너머로 보존하지 않는다). `!` 단언 대신 이 방식을 쓴다.
-  const { id: cycleId, version: cycleVersion, name, yearMonth, releaseNote } = cycle
-  const hasCycle = !!name && !!yearMonth
-  const note = releaseNote?.trim()
+  const { id: cycleId, version: cycleVersion, name, dir, releaseNote } = cycle
+  const hasCycle = !!name && !!dir
+  const note = (hasReleaseDoc ? releaseDoc?.content : releaseNote)?.trim()
   const existingPaths = new Set((documents ?? []).map((d) => d.path))
 
   const handleDelete = async () => {
@@ -82,10 +90,10 @@ export function ReleasePage() {
         )}
       </div>
 
-      {hasCycle && name && yearMonth && (
-        <div className="mb-8 grid grid-cols-4 gap-2">
+      {hasCycle && dir && (
+        <div className="mb-8 grid grid-cols-6 gap-2">
           {PDCA_STAGES.map((stage) => {
-            const path = cycleStagePath(yearMonth, name, stage)
+            const path = cycleStagePath(dir, stage)
             const exists = existingPaths.has(path)
             return exists ? (
               <Link
@@ -109,7 +117,12 @@ export function ReleasePage() {
       )}
 
       <div className="border-t border-(--ctp-surface0) pt-4">
-        <h2 className="mb-2 text-sm font-medium text-(--ctp-text)">릴리즈 노트</h2>
+        <h2 className="mb-2 text-sm font-medium text-(--ctp-text)">
+          릴리즈 노트
+          {hasReleaseDoc && (
+            <span className="ml-2 font-mono text-xs font-normal text-(--ctp-overlay0)">{releaseDocPath}</span>
+          )}
+        </h2>
         {note ? (
           <ReleaseNoteView content={note} />
         ) : (

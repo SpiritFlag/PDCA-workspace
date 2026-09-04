@@ -13,7 +13,7 @@
 
 ---
 
-PDCA 사이클 문서(plan · design · analysis · report)를 웹에서 읽고 쓰는 자체 호스팅 워크스페이스.
+PDCA 사이클 문서(plan · design · do · analysis · report · release)를 웹에서 읽고 쓰는 자체 호스팅 워크스페이스.
 레포 안 마크다운 파일로만 존재하던 PDCA 산출물을 **경로 구조를 그대로 유지한 채** 웹으로 옮겨,
 브라우저에서 문서 사이를 오가고 백로그를 관리하고 클로드(MCP)가 직접 읽고 쓸 수 있게 한다.
 
@@ -39,11 +39,11 @@ URL:   /w/{워크스페이스}/p/{프로젝트}/docs/PDCA/2026-08/adopt-pdcaw-cl
 | **3계층 구조** | Workspace > Project > Document. 계정별로 격리되며 slug로 주소가 정해진다 |
 | **문서 뷰어·에디터** | 마크다운 렌더(GFM, sanitize) + CodeMirror 에디터. 링크는 존재 여부에 따라 살아있는 링크 / 생성 폼 프리필로 갈린다 |
 | **임포트** | 레포 문서를 사이클 단위로 붙여넣어 등록. 경로가 규칙에 맞으면 자동 조립된다 |
-| **사이클(릴리즈)** | 버전을 1급 엔티티로 관리 — 버전마다 고유 URL(`/r/{버전}`)을 갖는 릴리즈 상세 페이지가 있다. 릴리즈노트(마크다운) + PDCA 사이클 연결(선택)을 그 페이지에서 함께 보고, plan/design/analysis/report 4버튼으로 문서를 오간다 |
+| **사이클(릴리즈)** | 버전을 1급 엔티티로 관리 — 버전마다 고유 URL(`/r/{버전}`)을 갖는 릴리즈 상세 페이지가 있다. 릴리즈노트(마크다운) + PDCA 사이클 연결(선택)을 그 페이지에서 함께 보고, plan/design/do/analysis/report/release 6버튼으로 문서를 오간다 |
 | **백로그 보드** | 프로젝트별 보드. 중요도 4단계 · 상태 5단계 · 드래그 정렬 · 접힘 섹션 |
-| **MCP 서버** | `/api/mcp` — 클로드가 문서와 백로그를 직접 읽고 쓴다 (툴 10개 + 프롬프트 2개) |
+| **MCP 서버** | `/api/mcp` — 클로드가 문서와 백로그를 직접 읽고 쓴다 (툴 11개) |
 | **PAT 발급** | `/settings/tokens` — CLI·MCP용 개인 액세스 토큰. 평문은 발급 직후 1회만 표시 |
-| **부가** | ⌘K 커맨드 팔레트(제목·경로 부분일치), 사이드바 문서 트리(버전 하위에 PDCA 4문서, 일반 문서는 별도 트리), 프로젝트 페이지 projectId 복사(`.pdcarc.json` 작성용), Latte/Mocha 테마 토글 |
+| **부가** | ⌘K 커맨드 팔레트(제목·경로 부분일치), 사이드바 문서 트리(버전 하위에 PDCA 6문서, 일반 문서는 별도 트리), 프로젝트 페이지 projectId 복사(`.pdcarc.json` 작성용), Latte/Mocha 테마 토글 |
 
 ### 백로그 상태 모델
 
@@ -146,11 +146,12 @@ npm run dev:local      # API(tsx watch) + 웹(vite) 동시 기동 — 평소엔 
 
 ## MCP 연동
 
-`/api/mcp`가 stateless Streamable HTTP MCP 서버다. 툴 10개를 노출한다.
+`/api/mcp`가 stateless Streamable HTTP MCP 서버다. 툴 11개를 노출한다. claude.ai 웹 대화가
+서버를 읽고 쓰는 통로이고, Claude Code 스킬은 대신 `pdcaw` CLI를 쓴다.
 
 ```
 project_list · document_list · document_read · document_write
-backlog_list · backlog_create · backlog_update · backlog_reorder
+backlog_list · backlog_get · backlog_create · backlog_update · backlog_reorder
 cycle_list · cycle_read
 ```
 
@@ -163,32 +164,35 @@ claude.ai 웹 커넥터는 URL만 입력하면 DCR이 자동으로 클라이언�
 잔재인 `?token=` 쿼리파라미터 경로도 **아직 남아있다**(Vercel 로그에 평문이 남는 알려진
 트레이드오프) — legacy 경로 완전 제거는 `v0.2.1`에서 예정돼 있다.
 
-**프롬프트(v0.1.9~)**: 반복 워크플로 지침을 서버에 등록해 클라이언트가 슬래시 커맨드로
-불러 쓴다 — `/mcp__<서버명>__backlog_sync`(사이클 종료 후 백로그 최신화), `__make_cc_prompt`
-(백로그 항목 → Claude Code용 Plan 작성 지시서 생성). 인자는 전부 선택이라 아무것도 안 치고
-실행해도 절차가 시작된다. Claude Code·claude.ai 웹 커넥터 양쪽에서 노출을 확인했다.
+**프롬프트 표면은 없다** (pdca-skill v1에서 제거). 반복 절차(백로그 동기화, 사이클 제안 등)는
+Claude Code 스킬이 정본이고, MCP는 claude.ai 웹 대화에서 서버를 읽고 쓰는 용도로만 남는다.
 
 ## 문서 동기화 — `pdcaw` CLI
 
 레포의 마크다운을 이 서버로 올리는 건 별도 npm 패키지 [`pdcaw`](https://www.npmjs.com/package/pdcaw)가
 담당한다. 파일을 그대로 읽어 전송하므로 **문서 본문이 LLM 컨텍스트를 통과하지 않는다** —
-설계 문서 한 뭉치를 올려도 토큰이 들지 않고, 옮겨 적다 생기는 오타도 없다.
+설계 문서 한 뭉치를 올려도 토큰이 들지 않고, 옮겨 적다 생기는 오타도 없다. Claude Code 스킬은
+백로그·릴리즈도 MCP가 아니라 이 CLI로만 만진다(MCP를 못 붙이는 환경에서도 돌게 하기 위해).
 
 ```bash
 # 마지막 태그 이후 변경된 docs/ 문서 전부 동기화
-npx pdcaw@latest upload
+npx pdcaw@1 upload
 
-# 사이클을 닫으면서 릴리즈까지 함께 생성
-npx pdcaw@latest upload --cycle <사이클명> --version v0.1.0
+# 사이클을 닫으면서 릴리즈까지 함께 생성 (사이클 폴더는 버전으로 찾고, release.md가 릴리즈노트가 된다)
+npx pdcaw@1 upload --version v1.2.0
 ```
+
+pdcaw 1.x는 이 서버의 `cycles.dir` · 6 stage(마이그레이션 0004·0005)를 전제한다.
 
 ## PDCA 운영 방식
 
-이 저장소는 자기 자신을 PDCA로 개발한다. 사이클마다 `plan → design → analysis → report`
-4종 문서를 쓰고, 종료 시 버전 태그와 릴리즈를 남긴다.
+이 저장소는 자기 자신을 PDCA로 개발한다. 체계는 [pdca-skill](https://github.com/SpiritFlag/PDCA-skill) v1을 따른다.
+사이클마다 `plan → design → do → analysis → report → release` 6종 문서를 쓰고, 종료 시 버전 태그와
+릴리즈를 남긴다. 설계가 필요 없는 수정은 `release` 하나만 남기는 패치 트랙으로 돈다.
 
-- **규약과 종료 절차**: [`docs/RULE.md`](docs/RULE.md)
+- **규약과 종료 훅**: [`docs/RULE.md`](docs/RULE.md)
 - **전체 사이클 이력**: [`docs/PDCA/_INDEX.md`](docs/PDCA/_INDEX.md)
 
-문서는 Plan 단계부터 `docs/PDCA/YYYY-MM/{사이클명}/`에 바로 쓰고 사이클이 끝나도 이동하지
-않는다 — 이동이 없으면 상대링크가 깨질 일이 없기 때문이다.
+문서는 `docs/PDCA/v{N}/{버전}-{사이클명}/{버전}-{사이클명}.{stage}.md`에 쓰고 사이클이 끝나도
+이동하지 않는다. 서버는 경로를 계산하지 않고 사이클 폴더(`cycles.dir`)를 기록만 한다 — 옛
+`docs/PDCA/YYYY-MM/{사이클명}/` 배치도 그대로 열린다.

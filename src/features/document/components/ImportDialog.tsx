@@ -1,9 +1,11 @@
-// Design Ref: §5.4 ImportDialog/편집 화면 — FR-11(RAW 붙여넣기) + FR-12(링크 생사 프리뷰) + 기존 문서 수정.
-// Design Ref: §7.5 캐싱·갱신 정책 — 문서 저장은 디바운스 자동저장(2s). 편집 모드에서만 적용(생성은 명시적 클릭).
-// 생성(import) 모드는 PDCA 사이클 중심 UX — 사용자는 사이클명/단계/연월만 고르고 경로는 자동 조립한다.
+// ImportDialog/편집 화면 — RAW 붙여넣기 + 링크 생사 프리뷰 + 기존 문서 수정.
+// 문서 저장은 디바운스 자동저장(2s). 편집 모드에서만 적용(생성은 명시적 클릭).
+// 생성(import) 모드는 PDCA 사이클 중심 UX — 사용자는 사이클명/단계/사이클 폴더만 주고 경로는 자동 조립한다.
+// pdca-skill v1: 경로 규칙은 `{dir}/{basename(dir)}.{stage}.md` 하나. 연월 드롭다운은 없어졌다.
 import { useEffect, useRef, useState } from 'react'
 import { normalizePath } from '@/lib/path'
 import { classifyLink, resolveRelative } from '@/lib/path'
+import { PDCA_STAGES, cycleStagePath, type PdcaStage } from '@/features/cycle/lib/cyclePath'
 import { extractLinkHrefs } from '../lib/extractLinks'
 import { resolveLinks } from '../api'
 import { useCreateDocument, useUpdateDocument } from '../hooks/useDocuments'
@@ -16,25 +18,11 @@ type ExistingDocument = {
   title: string
   path: string
   kind: 'pdca' | 'general'
-  pdcaStage?: 'plan' | 'design' | 'analysis' | 'report' | null
+  pdcaStage?: PdcaStage | null
   content: string
 }
 
-// 연월 드롭다운 목록: 현재 기준 미래 2개월 ~ 과거 36개월 (최신순). 기본값은 현재 연월.
-function ymOf(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-function currentYm() {
-  return ymOf(new Date())
-}
-const MONTH_OPTIONS: string[] = (() => {
-  const now = new Date()
-  const out: string[] = []
-  for (let i = 2; i >= -36; i--) {
-    out.push(ymOf(new Date(now.getFullYear(), now.getMonth() + i, 1)))
-  }
-  return out
-})()
+const DIR_RE = /^docs\/PDCA\/(?:[^/\s]+\/)*[^/\s]+$/
 
 export function ImportDialog({
   projectId,
@@ -48,8 +36,8 @@ export function ImportDialog({
   wsSlug: string
   projSlug: string
   document?: ExistingDocument
-  // PDCA 사이클 카드에서 stage 버튼을 눌러 들어온 경우 — 사이클명/단계/연월이 고정된 생성모드.
-  prefill?: { name: string; stage: 'plan' | 'design' | 'analysis' | 'report'; yearMonth: string }
+  // PDCA 사이클 카드에서 stage 버튼을 눌러 들어온 경우 — 사이클명/단계/폴더가 고정된 생성모드.
+  prefill?: { name: string; stage: PdcaStage; dir: string }
   onClose: () => void
 }) {
   const isEdit = !!document
@@ -58,15 +46,13 @@ export function ImportDialog({
   const [title, setTitle] = useState(document?.title ?? '')
   const [path, setPath] = useState(document?.path ?? '')
   const [pathError, setPathError] = useState<string | null>(null)
-  // 생성 모드 전용 상태: 사이클명/문서명·연월·general 경로 뒷부분.
+  // 생성 모드 전용 상태: 사이클명/문서명·사이클 폴더·general 경로 뒷부분.
   const [name, setName] = useState(prefill?.name ?? '')
-  const [ym, setYm] = useState(prefill?.yearMonth ?? currentYm())
+  const [dir, setDir] = useState(prefill?.dir ?? '')
   const [generalTail, setGeneralTail] = useState('')
 
   const [kind, setKind] = useState<'pdca' | 'general'>(document?.kind ?? 'pdca')
-  const [stage, setStage] = useState<'plan' | 'design' | 'analysis' | 'report'>(
-    document?.pdcaStage ?? prefill?.stage ?? 'plan',
-  )
+  const [stage, setStage] = useState<PdcaStage>(document?.pdcaStage ?? prefill?.stage ?? 'plan')
   const [content, setContent] = useState(document?.content ?? '')
   const [preview, setPreview] = useState<LinkPreview | null>(null)
   const [checking, setChecking] = useState(false)
@@ -79,10 +65,10 @@ export function ImportDialog({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isFirstRender = useRef(true)
 
-  // 생성 모드에서 사이클명/단계/연월/general꼬리로부터 경로·제목을 파생한다.
+  // 생성 모드에서 사이클 폴더/단계/general꼬리로부터 경로·제목을 파생한다.
   const tail = generalTail.replace(/^\/+/, '')
-  const derivedPath =
-    kind === 'pdca' ? `docs/PDCA/${ym}/${name}/${name}.${stage}.md` : `docs/${tail}`
+  const trimmedDir = dir.trim().replace(/\/+$/, '')
+  const derivedPath = kind === 'pdca' ? (trimmedDir ? cycleStagePath(trimmedDir, stage) : '') : `docs/${tail}`
   const effectivePath = isEdit ? path : derivedPath
   const effectiveTitle = isEdit ? title : name.trim()
 
@@ -90,8 +76,10 @@ export function ImportDialog({
   if (!isEdit) {
     if (!name.trim()) {
       genPathError = kind === 'pdca' ? '사이클명을 입력하세요' : '문서명을 입력하세요'
-    } else if (kind === 'pdca' && /[/\s]/.test(name)) {
-      genPathError = '사이클명에 공백이나 /는 쓸 수 없습니다'
+    } else if (kind === 'pdca' && !trimmedDir) {
+      genPathError = '사이클 폴더를 입력하세요 (예: docs/PDCA/v1/v1.2.0-enhance-x)'
+    } else if (kind === 'pdca' && !DIR_RE.test(trimmedDir)) {
+      genPathError = '사이클 폴더는 docs/PDCA/… 형태여야 하며 공백을 쓸 수 없습니다'
     } else if (kind === 'general' && !tail) {
       genPathError = '경로를 입력하세요'
     } else {
@@ -104,7 +92,7 @@ export function ImportDialog({
   }
   const effectivePathError = isEdit ? pathError : genPathError
 
-  // Plan SC: C4 지원 — 편집 중인 문서를 2초 무입력 후 자동저장. 생성(import) 모드는 명시적 저장만.
+  // 편집 중인 문서를 2초 무입력 후 자동저장. 생성(import) 모드는 명시적 저장만.
   useEffect(() => {
     if (!isEdit) return
     if (isFirstRender.current) {
@@ -195,6 +183,16 @@ export function ImportDialog({
   const selectCls =
     'mt-1 rounded border border-(--ctp-surface1) bg-(--ctp-base) px-2 py-1.5 text-(--ctp-text)'
 
+  const stageSelect = (onChange: (s: PdcaStage) => void) => (
+    <select value={stage} onChange={(e) => onChange(e.target.value as PdcaStage)} className={selectCls}>
+      {PDCA_STAGES.map((s) => (
+        <option key={s} value={s}>
+          {s}
+        </option>
+      ))}
+    </select>
+  )
+
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-(--ctp-surface0) bg-(--ctp-mantle) p-4">
       <h2 className="text-sm font-medium text-(--ctp-text)">{isEdit ? '문서 수정' : '문서 임포트'}</h2>
@@ -208,7 +206,7 @@ export function ImportDialog({
 
           <div>
             <label className="block text-sm text-(--ctp-subtext1)">
-              경로 (레포 루트 기준, 예: docs/PDCA/2026-07/x/x.plan.md)
+              경로 (레포 루트 기준, 예: docs/PDCA/v1/v1.2.0-x/v1.2.0-x.plan.md)
             </label>
             <input
               value={path}
@@ -233,16 +231,7 @@ export function ImportDialog({
             {kind === 'pdca' && (
               <div>
                 <label className="block text-sm text-(--ctp-subtext1)">단계</label>
-                <select
-                  value={stage}
-                  onChange={(e) => setStage(e.target.value as typeof stage)}
-                  className={selectCls}
-                >
-                  <option value="plan">plan</option>
-                  <option value="design">design</option>
-                  <option value="analysis">analysis</option>
-                  <option value="report">report</option>
-                </select>
+                {stageSelect(setStage)}
               </div>
             )}
           </div>
@@ -282,7 +271,7 @@ export function ImportDialog({
           {/* 2. 사이클명 / 문서명 */}
           <div>
             <label className="block text-sm text-(--ctp-subtext1)">
-              {kind === 'pdca' ? '사이클명' : '문서명'}
+              {kind === 'pdca' ? '사이클명 (문서 제목이 된다)' : '문서명'}
             </label>
             <input
               value={name}
@@ -290,55 +279,43 @@ export function ImportDialog({
                 setName(e.target.value)
                 setPreview(null)
               }}
-              placeholder={kind === 'pdca' ? '예: backlog-with-mcp' : '예: 회의록'}
+              placeholder={kind === 'pdca' ? '예: enhance-lyric-sync' : '예: 회의록'}
               className={inputCls}
             />
           </div>
 
-          {/* pdca 단계 */}
+          {/* pdca: 단계 + 사이클 폴더 */}
           {kind === 'pdca' && (
-            <div>
-              <label className="block text-sm text-(--ctp-subtext1)">단계</label>
-              <select
-                value={stage}
-                onChange={(e) => {
-                  setStage(e.target.value as typeof stage)
+            <>
+              <div>
+                <label className="block text-sm text-(--ctp-subtext1)">단계</label>
+                {stageSelect((s) => {
+                  setStage(s)
                   setPreview(null)
-                }}
-                className={selectCls}
-              >
-                <option value="plan">plan</option>
-                <option value="design">design</option>
-                <option value="analysis">analysis</option>
-                <option value="report">report</option>
-              </select>
-            </div>
+                })}
+              </div>
+              <div>
+                <label className="block text-sm text-(--ctp-subtext1)">사이클 폴더</label>
+                <input
+                  value={dir}
+                  onChange={(e) => {
+                    setDir(e.target.value)
+                    setPreview(null)
+                  }}
+                  placeholder="예: docs/PDCA/v1/v1.2.0-enhance-lyric-sync"
+                  className={`${inputCls} font-mono text-sm`}
+                />
+              </div>
+            </>
           )}
 
           {/* 3. 문서 경로 (자동 조립) */}
           <div>
             <label className="block text-sm text-(--ctp-subtext1)">문서 경로 (자동)</label>
             {kind === 'pdca' ? (
-              <div className="mt-1 flex flex-wrap items-center gap-1 font-mono text-sm">
-                <span className="text-(--ctp-overlay0)">docs/PDCA/</span>
-                <select
-                  value={ym}
-                  onChange={(e) => {
-                    setYm(e.target.value)
-                    setPreview(null)
-                  }}
-                  className="rounded border border-(--ctp-surface1) bg-(--ctp-base) px-2 py-1 text-(--ctp-text)"
-                >
-                  {MONTH_OPTIONS.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-(--ctp-overlay0)">
-                  /{name || '사이클명'}/{name || '사이클명'}.{stage}.md
-                </span>
-              </div>
+              <p className="mt-1 font-mono text-sm text-(--ctp-overlay0)">
+                {derivedPath || '{사이클 폴더}/{폴더명}.' + stage + '.md'}
+              </p>
             ) : (
               <div className="mt-1 flex items-center gap-1 font-mono text-sm">
                 <span className="shrink-0 text-(--ctp-overlay0)">docs/</span>

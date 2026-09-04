@@ -33,7 +33,9 @@ export const updateProjectSchema = createProjectSchema.partial()
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>
 
 export const documentKindSchema = z.enum(['pdca', 'general'])
-export const pdcaStageSchema = z.enum(['plan', 'design', 'analysis', 'report'])
+// pdca-skill v1: 6 stage. do(구현 기록)·release(릴리즈노트)가 추가됐다.
+export const pdcaStageSchema = z.enum(['plan', 'design', 'do', 'analysis', 'report', 'release'])
+export type PdcaStage = z.infer<typeof pdcaStageSchema>
 
 // Design Ref: §3.2 — MCP document_write가 재사용(D-26). 서버가 normalizePath로 재정규화하므로
 // path는 여기서 형태만 검증
@@ -96,8 +98,25 @@ const backlogItemFields = z.object({
   closedOn: dateStringSchema.nullable().optional(),
 })
 
-export const updateBacklogItemSchema = backlogItemFields.partial()
+// pdca-skill v1 §9.2 — appendDetail: 서버가 기존 detail 앞에 블록을 얹는다(원안 보존을 서버가 책임).
+// detail(전체 교체)과 함께 보내면 400.
+export const updateBacklogItemSchema = backlogItemFields
+  .partial()
+  .extend({ appendDetail: backlogDetailSchema.optional() })
+  .refine((v) => !(v.detail !== undefined && v.appendDetail !== undefined), {
+    message: 'detail(전체 교체)과 appendDetail(앞에 덧붙임)은 함께 쓸 수 없습니다',
+    path: ['appendDetail'],
+  })
 export type UpdateBacklogItemInput = z.infer<typeof updateBacklogItemSchema>
+
+// pdca-skill v1 §9.2 — 목록 조회 필터(REST 쿼리). 값은 전부 문자열로 들어오므로 여기서 형태만 검증한다.
+// 요약(detail 없음)은 별도 경로 GET …/backlog/summary — 응답 타입이 유니온이 되지 않게 경로로 가른다.
+export const backlogListQuerySchema = z.object({
+  status: z.string().optional(), // 쉼표 구분: todo,doing
+  stale: z.string().regex(/^\d+$/, '정수(일)여야 합니다').optional(),
+  q: z.string().max(300).optional(),
+})
+export type BacklogListQuery = z.infer<typeof backlogListQuerySchema>
 
 export const reorderBacklogSchema = z.object({
   ids: z.array(z.uuid()).min(1).max(1000),
@@ -105,12 +124,18 @@ export const reorderBacklogSchema = z.object({
 export type ReorderBacklogInput = z.infer<typeof reorderBacklogSchema>
 
 // 버전(release) — version이 프로젝트 내 유일키. 릴리즈노트(마크다운)를 갖고,
-// 선택적으로 PDCA 사이클(name+yearMonth)을 하나 연결한다(연결 없는 버전도 허용).
-// 사이클 연결 시 문서 경로: docs/PDCA/{yearMonth}/{name}/{name}.{stage}.md
+// 선택적으로 PDCA 사이클(name + dir)을 하나 연결한다(연결 없는 버전도 허용).
+// pdca-skill v1: 서버는 경로를 계산하지 않고 기록한다. dir은 사이클 폴더 경로 그대로이고
+// (예: docs/PDCA/v1/v1.2.0-enhance-x), 문서 경로는 `{dir}/{basename(dir)}.{stage}.md`다.
+// 사이클명은 유일하지 않다 — 열쇠는 version뿐이다.
 export const cycleVersionSchema = z
   .string()
   .regex(/^v\d+\.\d+\.\d+$/, '버전은 v0.1.0 형식이어야 합니다')
-export const yearMonthSchema = z.string().regex(/^\d{4}-\d{2}$/, 'YYYY-MM 형식이어야 합니다')
+export const cycleDirSchema = z
+  .string()
+  .max(500)
+  // docs/PDCA/ 아래, 세그먼트에 공백 없음, 끝 슬래시 없음
+  .regex(/^docs\/PDCA\/(?:[^/\s]+\/)*[^/\s]+$/, '사이클 폴더는 docs/PDCA/… 형태여야 합니다')
 export const cycleNameSchema = z
   .string()
   .min(1)
@@ -119,23 +144,21 @@ export const cycleNameSchema = z
   .regex(/^[A-Za-z0-9._-]+$/, '사이클명은 영문·숫자·._- 만 가능합니다')
 
 // zod v4: refine이 붙은 스키마엔 partial()을 못 쓰므로 필드 정의/refine을 분리한다
-// Design Ref: §3.2 — name/yearMonth nullable(D-31a: create/update가 이 필드를 공유하고
-// CycleForm이 createCycleSchema를 resolver로 쓰므로 공유 필드에 넣는다, V2 실측).
-// null 쌍 = 연결 해제(update) 또는 미연결 생성(create, FR-41).
+// name/dir nullable: create/update가 이 필드를 공유하고 CycleForm이 createCycleSchema를
+// resolver로 쓰므로 공유 필드에 넣는다. null 쌍 = 연결 해제(update) 또는 미연결 생성(create).
 const cycleFields = z.object({
   version: cycleVersionSchema,
   releaseNote: z.string().max(50000).optional(),
   name: cycleNameSchema.nullable().optional(),
-  yearMonth: yearMonthSchema.nullable().optional(),
+  dir: cycleDirSchema.nullable().optional(),
 })
 
-// Design Ref: §3.2 D-38 — 엄격 pair 술어. null(해제)과 undefined(무변경)를 구분한다.
-// 느슨한 `== null` 동치 비교는 {name:null} 편측 패치를 통과시켜 병합 부정합을 만든다(V1 반례).
-export const cyclePairRule = (v: { name?: string | null; yearMonth?: string | null }) =>
-  (v.name === undefined) === (v.yearMonth === undefined) &&
-  (v.name === null) === (v.yearMonth === null)
+// 엄격 pair 술어. null(해제)과 undefined(무변경)를 구분한다.
+// 느슨한 `== null` 동치 비교는 {name:null} 편측 패치를 통과시켜 병합 부정합을 만든다.
+export const cyclePairRule = (v: { name?: string | null; dir?: string | null }) =>
+  (v.name === undefined) === (v.dir === undefined) && (v.name === null) === (v.dir === null)
 export const CYCLE_PAIR_MESSAGE =
-  'PDCA 사이클 연결·해제에는 사이클명과 연월이 함께 있어야 합니다 (해제는 둘 다 null)'
+  'PDCA 사이클 연결·해제에는 사이클명과 사이클 폴더가 함께 있어야 합니다 (해제는 둘 다 null)'
 
 export const createCycleSchema = cycleFields.refine(cyclePairRule, {
   message: CYCLE_PAIR_MESSAGE,
