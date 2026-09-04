@@ -13,7 +13,7 @@
 
 ---
 
-PDCA 사이클 문서(plan · design · analysis · report)를 웹에서 읽고 쓰는 자체 호스팅 워크스페이스.
+PDCA 사이클 문서(plan · design · do · analysis · report · release)를 웹에서 읽고 쓰는 자체 호스팅 워크스페이스.
 레포 안 마크다운 파일로만 존재하던 PDCA 산출물을 **경로 구조를 그대로 유지한 채** 웹으로 옮겨,
 브라우저에서 문서 사이를 오가고 백로그를 관리하고 클로드(MCP)가 직접 읽고 쓸 수 있게 한다.
 
@@ -41,7 +41,7 @@ URL:   /w/{워크스페이스}/p/{프로젝트}/docs/PDCA/2026-08/adopt-pdcaw-cl
 | **임포트** | 레포 문서를 사이클 단위로 붙여넣어 등록. 경로가 규칙에 맞으면 자동 조립된다 |
 | **사이클(릴리즈)** | 버전을 1급 엔티티로 관리 — 버전마다 고유 URL(`/r/{버전}`)을 갖는 릴리즈 상세 페이지가 있다. 릴리즈노트(마크다운) + PDCA 사이클 연결(선택)을 그 페이지에서 함께 보고, plan/design/do/analysis/report/release 6버튼으로 문서를 오간다 |
 | **백로그 보드** | 프로젝트별 보드. 중요도 4단계 · 상태 5단계 · 드래그 정렬 · 접힘 섹션 |
-| **MCP 서버** | `/api/mcp` — 클로드가 문서와 백로그를 직접 읽고 쓴다 (툴 10개) |
+| **MCP 서버** | `/api/mcp` — 클로드가 문서와 백로그를 직접 읽고 쓴다 (툴 11개) |
 | **PAT 발급** | `/settings/tokens` — CLI·MCP용 개인 액세스 토큰. 평문은 발급 직후 1회만 표시 |
 | **부가** | ⌘K 커맨드 팔레트(제목·경로 부분일치), 사이드바 문서 트리(버전 하위에 PDCA 6문서, 일반 문서는 별도 트리), 프로젝트 페이지 projectId 복사(`.pdcarc.json` 작성용), Latte/Mocha 테마 토글 |
 
@@ -146,12 +146,12 @@ npm run dev:local      # API(tsx watch) + 웹(vite) 동시 기동 — 평소엔 
 
 ## MCP 연동
 
-`/api/mcp`가 stateless Streamable HTTP MCP 서버다. 툴 10개를 노출한다. claude.ai 웹 대화가
+`/api/mcp`가 stateless Streamable HTTP MCP 서버다. 툴 11개를 노출한다. claude.ai 웹 대화가
 서버를 읽고 쓰는 통로이고, Claude Code 스킬은 대신 `pdcaw` CLI를 쓴다.
 
 ```
 project_list · document_list · document_read · document_write
-backlog_list · backlog_create · backlog_update · backlog_reorder
+backlog_list · backlog_get · backlog_create · backlog_update · backlog_reorder
 cycle_list · cycle_read
 ```
 

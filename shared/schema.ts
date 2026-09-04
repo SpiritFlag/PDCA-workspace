@@ -98,8 +98,25 @@ const backlogItemFields = z.object({
   closedOn: dateStringSchema.nullable().optional(),
 })
 
-export const updateBacklogItemSchema = backlogItemFields.partial()
+// pdca-skill v1 §9.2 — appendDetail: 서버가 기존 detail 앞에 블록을 얹는다(원안 보존을 서버가 책임).
+// detail(전체 교체)과 함께 보내면 400.
+export const updateBacklogItemSchema = backlogItemFields
+  .partial()
+  .extend({ appendDetail: backlogDetailSchema.optional() })
+  .refine((v) => !(v.detail !== undefined && v.appendDetail !== undefined), {
+    message: 'detail(전체 교체)과 appendDetail(앞에 덧붙임)은 함께 쓸 수 없습니다',
+    path: ['appendDetail'],
+  })
 export type UpdateBacklogItemInput = z.infer<typeof updateBacklogItemSchema>
+
+// pdca-skill v1 §9.2 — 목록 조회 필터(REST 쿼리). 값은 전부 문자열로 들어오므로 여기서 형태만 검증한다.
+// 요약(detail 없음)은 별도 경로 GET …/backlog/summary — 응답 타입이 유니온이 되지 않게 경로로 가른다.
+export const backlogListQuerySchema = z.object({
+  status: z.string().optional(), // 쉼표 구분: todo,doing
+  stale: z.string().regex(/^\d+$/, '정수(일)여야 합니다').optional(),
+  q: z.string().max(300).optional(),
+})
+export type BacklogListQuery = z.infer<typeof backlogListQuerySchema>
 
 export const reorderBacklogSchema = z.object({
   ids: z.array(z.uuid()).min(1).max(1000),

@@ -3,7 +3,8 @@ import { api } from '@/lib/api'
 import type { CreateBacklogItemInput, UpdateBacklogItemInput } from '@shared/schema'
 
 export async function fetchBacklog(projectId: string) {
-  const res = await api.projects[':projId'].backlog.$get({ param: { projId: projectId } })
+  // 보드는 전체 행(detail 포함)을 쓴다. 요약은 …/backlog/summary, 필터는 CLI·MCP용(pdca-skill v1 §9.2).
+  const res = await api.projects[':projId'].backlog.$get({ param: { projId: projectId }, query: {} })
   if (!res.ok) throw new Error('failed to fetch backlog')
   return (await res.json()).data
 }

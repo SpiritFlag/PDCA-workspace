@@ -111,10 +111,10 @@ describe.skipIf(!hasDb)('mcp L1 (실 dev DB)', () => {
 
   // ── m7~m13: S3 cycles 읽기 툴 + S5 backlog_reorder 실행 확인 ──
 
-  it('m7 tools/list — 정확히 10개, delete 계열 0', async () => {
+  it('m7 tools/list — 정확히 11개, delete 계열 0', async () => {
     const res = await rpc(tokenA, 'tools/list')
     const json = (await res.json()) as { result: { tools: Array<{ name: string }> } }
-    expect(json.result.tools).toHaveLength(10)
+    expect(json.result.tools).toHaveLength(11)
     expect(json.result.tools.some((t) => t.name.includes('delete'))).toBe(false)
   })
 
